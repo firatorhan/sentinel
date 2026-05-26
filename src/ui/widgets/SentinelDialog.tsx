@@ -8,17 +8,33 @@ import {
   DialogDescription,
   DialogFooter,
 } from "../components/Dialog";
-import { Label } from "../components/Label";
+import React from "react";
+import { Spotlight } from "../components/Spotlight";
 
-export const DialogDemo = () => {
+export const SentinelDialog = ({ children }: { children: React.ReactNode }) => {
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline">Get Information</Button>
-      </DialogTrigger>
+      <div className="flex flex-col items-center justify-center gap-4 relative">
+        <Spotlight>
+          <>
+            {children}
+
+            <DialogTrigger
+              asChild
+              className="absolute bottom-4 right-1/2 translate-x-1/2"
+            >
+              <Button variant="outline" size="sm">
+                Information
+              </Button>
+            </DialogTrigger>
+          </>
+        </Spotlight>
+      </div>
+
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit profile</DialogTitle>
+
           <DialogDescription>
             Make changes to your profile here. Click save when you&apos;re done.
           </DialogDescription>

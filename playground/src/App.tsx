@@ -12,8 +12,30 @@ function App() {
           </p>
         </div>
         <Sentinel>
-          <div>Sentinel Active</div>
+          <div
+            style={{
+              height: "100px",
+              width: "100%",
+              backgroundColor: "lightgray",
+            }}
+          >
+            Sentinel Active
+          </div>
         </Sentinel>
+        <div className="mt-[400px]">
+          <Sentinel>
+            <div
+              style={{
+                height: "100px",
+                width: "400px",
+                backgroundColor: "lightgray",
+               
+              }}
+            >
+              Sentinel Active
+            </div>
+          </Sentinel>
+        </div>
       </section>
     </>
   );

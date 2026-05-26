@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
-import { Button } from "../ui/components/Button";
-import { DialogDemo } from "../ui/widgets/SentinelDialog";
+import { SentinelDialog } from "../ui/widgets/SentinelDialog";
 
 export function Sentinel({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -9,11 +8,7 @@ export function Sentinel({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {children}
-      <Button type="button" variant="destructive" size="lg">
-        Click me!!
-      </Button>
-      <DialogDemo />
+      <SentinelDialog>{children}</SentinelDialog>
     </>
   );
 }
