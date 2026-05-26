@@ -4,10 +4,14 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./index.css": "./dist/sentinel.css"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "vite",
+    "dev": "npm --prefix playground run dev & vite build --watch",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

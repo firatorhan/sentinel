@@ -1,6 +1,6 @@
 import "./App.css";
 import { Sentinel } from "sentinel";
-
+import "sentinel/index.css";
 function App() {
   return (
     <>

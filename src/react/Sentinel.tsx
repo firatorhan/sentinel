@@ -9,8 +9,8 @@ export function Sentinel({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
-      <Button type="button" variant="secondary" size="lg">
-        Click me!
+      <Button type="button" variant="destructive" size="lg">
+        Click me!!
       </Button>
     </>
   );
