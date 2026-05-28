@@ -1,3 +1,3 @@
-export const Sentinel = () => {
-  return "Sentinel is running";
-};
+
+import "./index.css";
+export * from "./react";

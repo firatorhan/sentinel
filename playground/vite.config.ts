@@ -1,13 +1,14 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-   resolve: {
+  resolve: {
     alias: {
-      sentinel: path.resolve(__dirname, "../src"),
+      // Projedeki her şeyin tek bir React sürümüne bakmasını zorunlu kılar:
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
     },
   },
-})
+});
