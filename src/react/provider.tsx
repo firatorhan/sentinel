@@ -6,10 +6,19 @@ type SentinelContextType = {
   activeId: string | null;
   activeRect: DOMRect | null;
   openDialogId: string | null;
-  dialogMeta: { title?: string; md?: string };
+  dialogMeta: {
+    title?: string;
+    md?: string;
+    componentProps?: Record<string, any>;
+  };
   registerHover: (id: string, rect: DOMRect) => void;
   unregisterHover: (id: string) => void;
-  openDialog: (id: string, title?: string, description?: string) => void;
+  openDialog: (
+    id: string,
+    title?: string,
+    md?: string,
+    componentProps?: Record<string, any>,
+  ) => void;
   closeDialog: () => void;
 };
 
@@ -41,9 +50,14 @@ export const SentinelProvider = ({
     );
   };
 
-  const openDialog = (id: string, title?: string, md?: string) => {
+  const openDialog = (
+    id: string,
+    title?: string,
+    md?: string,
+    componentProps?: Record<string, any>,
+  ) => {
     setOpenDialogId(id);
-    setDialogMeta({ title, md });
+    setDialogMeta({ title, md, componentProps });
   };
 
   const closeDialog = () => {

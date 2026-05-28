@@ -1,7 +1,7 @@
 import "./App.css";
 import { Sentinel, SentinelProvider } from "sentinel";
 import "sentinel/index.css";
-
+import Example from "./assets/example.md?raw";
 const products = [
   {
     id: 1,
@@ -22,24 +22,15 @@ const products = [
     title: "Classic White",
     desc: "Minimal tasarım, her stile uyum sağlayan klasik sneaker.",
     price: "₺1.199",
-    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fHNuZWFrZXJzfGVufDB8fDB8fHww",
+    image:
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fHNuZWFrZXJzfGVufDB8fDB8fHww",
   },
 ];
 
 // 🖼 IMAGE COMPONENT
 const ProductImage = ({ src }: { src: string }) => {
   return (
-    <Sentinel>
-      <img
-        style={{
-          width: "100%",
-          height: "180px",
-          objectFit: "cover",
-        }}
-        src={src}
-        alt="product"
-      />
-    </Sentinel>
+    <img className="w-full h-[180px] object-cover" src={src} alt="product" />
   );
 };
 
@@ -53,49 +44,19 @@ const ProductContent = ({
   desc: string;
   price: string;
 }) => {
-  const styles: { [key: string]: React.CSSProperties } = {
-    content: {
-      padding: "16px",
-    },
-    title: {
-      fontSize: "18px",
-      fontWeight: 600,
-      margin: "0 0 8px 0",
-    },
-    desc: {
-      fontSize: "13px",
-      color: "#666",
-      marginBottom: "12px",
-      lineHeight: 1.4,
-    },
-    price: {
-      fontSize: "16px",
-      fontWeight: 700,
-      color: "#2ecc71",
-      marginBottom: "12px",
-    },
-    button: {
-      width: "100%",
-      padding: "10px",
-      border: "none",
-      borderRadius: "10px",
-      backgroundColor: "#111",
-      color: "#fff",
-      cursor: "pointer",
-    },
-  };
-
   return (
     <Sentinel>
-      <div style={styles.content}>
-        <h3 style={styles.title}>{title}</h3>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
 
-        <p style={styles.desc}>{desc}</p>
+        <p className="text-xs text-muted-foreground mb-3 leading-5">{desc}</p>
 
-        <div style={styles.price}>{price}</div>
+        <div className="text-base font-bold text-emerald-500 mb-3">{price}</div>
+
         <Sentinel dialogTitle="buton">
-          {" "}
-          <button style={styles.button}>Sepete Ekle</button>
+          <button className="w-full py-2 rounded-lg bg-black text-white hover:bg-zinc-800 transition">
+            Sepete Ekle
+          </button>
         </Sentinel>
       </div>
     </Sentinel>
@@ -104,30 +65,13 @@ const ProductContent = ({
 
 function App() {
   return (
-    <section id="center">
+    <section className="min-h-screen flex items-center justify-center bg-background">
       <SentinelProvider>
-        <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            flexWrap: "nowrap",
-            justifyContent: "flex-start",
-          }}
-        >
+        <div className="flex gap-4 flex-nowrap justify-start">
           {products.map((p) => (
-            <Sentinel key={p.id}>
-              <div
-                style={{
-                  width: "280px",
-                  borderRadius: "16px",
-                  overflow: "hidden",
-                  backgroundColor: "#fff",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-                  fontFamily: "Arial, sans-serif",
-                }}
-              >
+            <Sentinel key={p.id} dialogMd={Example} componentProps={p}>
+              <div className="rounded-2xl overflow-hidden bg-white shadow-lg w-64">
                 <ProductImage src={p.image} />
-
                 <ProductContent title={p.title} desc={p.desc} price={p.price} />
               </div>
             </Sentinel>
