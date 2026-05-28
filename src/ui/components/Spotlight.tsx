@@ -11,14 +11,19 @@ export const Spotlight = ({ children, active = true }: SpotlightProps) => {
 
   if (!active) return <>{children}</>;
 
-  const handleUpdate = (e: React.MouseEvent<HTMLElement>) => {
+  const handleOnMouseEnter = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
     setRect(e.currentTarget.getBoundingClientRect());
+  };
+  const handleOnMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    setRect(null)
   };
 
   const bind = {
-    onMouseEnter: handleUpdate,
-    onMouseMove: handleUpdate,
-    onMouseLeave: () => setRect(null),
+    onMouseEnter: handleOnMouseEnter,
+    onMouseMove: handleOnMouseEnter,
+    onMouseLeave: handleOnMouseLeave,
   };
 
   const centerX = rect ? rect.left + rect.width / 2 : 0;

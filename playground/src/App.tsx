@@ -1,21 +1,59 @@
 import "./App.css";
-import { Sentinel } from "sentinel";
+import { Sentinel, SentinelProvider } from "sentinel";
 import "sentinel/index.css";
-function App() {
+
+const products = [
+  {
+    id: 1,
+    title: "Minimal Sneakers",
+    desc: "Modern tasarıma sahip, günlük kullanım için ideal sneaker model.",
+    price: "₺1.299",
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30",
+  },
+  {
+    id: 2,
+    title: "Urban Runner",
+    desc: "Koşu ve günlük kullanım için hafif performans ayakkabısı.",
+    price: "₺1.599",
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff",
+  },
+  {
+    id: 3,
+    title: "Classic White",
+    desc: "Minimal tasarım, her stile uyum sağlayan klasik sneaker.",
+    price: "₺1.199",
+    image: "https://images.unsplash.com/photo-1528701800489-20be3c5d0d0e",
+  },
+];
+
+// 🖼 IMAGE COMPONENT
+const ProductImage = ({ src }: { src: string }) => {
+  return (
+    <Sentinel>
+      <img
+        style={{
+          width: "100%",
+          height: "180px",
+          objectFit: "cover",
+        }}
+        src={src}
+        alt="product"
+      />
+    </Sentinel>
+  );
+};
+
+// 🧾 CONTENT COMPONENT
+const ProductContent = ({
+  title,
+  desc,
+  price,
+}: {
+  title: string;
+  desc: string;
+  price: string;
+}) => {
   const styles: { [key: string]: React.CSSProperties } = {
-    card: {
-      width: "280px",
-      borderRadius: "16px",
-      overflow: "hidden",
-      backgroundColor: "#fff",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
-      fontFamily: "Arial, sans-serif",
-    },
-    image: {
-      width: "100%",
-      height: "180px",
-      objectFit: "cover", // artık hata vermez
-    },
     content: {
       padding: "16px",
     },
@@ -46,48 +84,57 @@ function App() {
       cursor: "pointer",
     },
   };
+
   return (
-    <>
-      <section id="center">
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+    <Sentinel>
+      <div style={styles.content}>
+        <h3 style={styles.title}>{title}</h3>
+
+        <p style={styles.desc}>{desc}</p>
+
+        <div style={styles.price}>{price}</div>
+        <Sentinel dialogTitle="buton">
+          {" "}
+          <button style={styles.button}>Sepete Ekle</button>
+        </Sentinel>
+      </div>
+    </Sentinel>
+  );
+};
+
+function App() {
+  return (
+    <section id="center">
+      <SentinelProvider>
+        <div
+          style={{
+            display: "flex",
+            gap: "16px",
+            flexWrap: "nowrap",
+            justifyContent: "flex-start",
+          }}
+        >
+          {products.map((p) => (
+            <Sentinel key={p.id}>
+              <div
+                style={{
+                  width: "280px",
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  backgroundColor: "#fff",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+                  fontFamily: "Arial, sans-serif",
+                }}
+              >
+                <ProductImage src={p.image} />
+
+                <ProductContent title={p.title} desc={p.desc} price={p.price} />
+              </div>
+            </Sentinel>
+          ))}
         </div>
-
-        <div>
-          <Sentinel>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Sentinel>
-                  <div key={i} style={styles.card}>
-                    <img
-                      style={styles.image}
-                      src="https://images.unsplash.com/photo-1523275335684-37898b6baf30"
-                      alt="product"
-                    />
-
-                    <div style={styles.content}>
-                      <h3 style={styles.title}>Minimal Sneakers</h3>
-
-                      <p style={styles.desc}>
-                        Modern tasarıma sahip, günlük kullanım için ideal
-                        sneaker model.
-                      </p>
-
-                      <div style={styles.price}>₺1.299</div>
-
-                      <button style={styles.button}>Sepete Ekle</button>
-                    </div>
-                  </div>
-                </Sentinel>
-              ))}
-            </div>
-          </Sentinel>
-        </div>
-      </section>
-    </>
+      </SentinelProvider>
+    </section>
   );
 }
 
