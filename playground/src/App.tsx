@@ -22,7 +22,7 @@ const products = [
     title: "Classic White",
     desc: "Minimal tasarım, her stile uyum sağlayan klasik sneaker.",
     price: "₺1.199",
-    image: "https://images.unsplash.com/photo-1528701800489-20be3c5d0d0e",
+    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTl8fHNuZWFrZXJzfGVufDB8fDB8fHww",
   },
 ];
 

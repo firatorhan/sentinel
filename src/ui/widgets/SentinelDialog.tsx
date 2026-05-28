@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "../components/Dialog";
 import React from "react";
-import { Spotlight } from "../components/Spotlight";
+import { Spotlight } from "./Spotlight";
 
 export const SentinelDialog = ({ children }: { children: React.ReactNode }) => {
   return (
