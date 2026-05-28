@@ -32,11 +32,7 @@ export const Sentinel = ({
     e.stopPropagation();
     openDialog(id, dialogTitle, dialogDescription);
   };
-  useEffect(() => {
-    console.log("Active Sentinel ID:", activeId, id);
 
-    console.log("isDirectlyActive:", isDirectlyActive);
-  }, [isDirectlyActive]);
   return (
     <div
       onMouseMove={handleMouseMove}

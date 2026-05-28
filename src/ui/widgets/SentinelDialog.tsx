@@ -10,10 +10,20 @@ import {
 } from "../components/Dialog";
 import React from "react";
 import { Spotlight } from "./Spotlight";
+import { useSentinel } from "../../react";
 
-export const SentinelDialog = ({ children }: { children: React.ReactNode }) => {
+export const SentinelDialog = ({
+  children,
+}: {
+  children?: React.ReactNode;
+}) => {
+  const { openDialogId, closeDialog, dialogMeta } = useSentinel();
+
   return (
-    <Dialog>
+    <Dialog
+      open={openDialogId !== null}
+      onOpenChange={(open) => !open && closeDialog()}
+    >
       <div className="flex flex-col items-center justify-center gap-4 relative">
         <Spotlight>
           <DialogTrigger asChild>{children}</DialogTrigger>
@@ -22,14 +32,15 @@ export const SentinelDialog = ({ children }: { children: React.ReactNode }) => {
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit profile</DialogTitle>
-
+          <DialogTitle>{dialogMeta.title || "Senitel"}</DialogTitle>
           <DialogDescription>
             Make changes to your profile here. Click save when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="submit">Save changes</Button>
+          <Button type="button" onClick={closeDialog}>
+            Save changes
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

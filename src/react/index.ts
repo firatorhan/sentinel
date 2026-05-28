@@ -1,4 +1,4 @@
 
 export { Sentinel } from "./Sentinel";
 export { SentinelProvider } from "./provider";
-export { useSentinel } from "./hooks";
+export { useSentinel } from "./provider";
