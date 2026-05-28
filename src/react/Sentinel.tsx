@@ -1,16 +1,18 @@
-import React, { useEffect, useId } from "react";
+import React, { useId } from "react";
 import { useSentinel } from "./provider";
 
 type SentinelProps = {
   children: React.ReactNode;
   dialogTitle?: string;
-  dialogDescription?: string;
+  dialogMd?: string;
+  componentProps?: Record<string, any>;
 };
 
 export const Sentinel = ({
   children,
   dialogTitle,
-  dialogDescription,
+  dialogMd,
+  componentProps,
 }: SentinelProps) => {
   const id = useId();
   const { activeId, registerHover, unregisterHover, openDialog } =
@@ -30,13 +32,9 @@ export const Sentinel = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openDialog(id, dialogTitle, dialogDescription);
+    openDialog(id, dialogTitle, dialogMd, componentProps);
   };
-  useEffect(() => {
-    console.log("Active Sentinel ID:", activeId, id);
 
-    console.log("isDirectlyActive:", isDirectlyActive);
-  }, [isDirectlyActive]);
   return (
     <div
       onMouseMove={handleMouseMove}
@@ -45,7 +43,7 @@ export const Sentinel = ({
       style={{
         zIndex: isDirectlyActive ? 51 : "initial",
       }}
-      className="relative block w-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      className="relative transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
     >
       <div
         className="w-full h-full p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"

@@ -85,9 +85,22 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <Button variant={"outline"} size={"sm"} className="">
-          <span>Close</span>
+      <DialogPrimitive.DialogClose className="absolute right-2 top-2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <Button variant={"ghost"} size={"icon"}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            // 2. Ünlem koyarak global CSS kurallarını ezdik
+            className="!size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5" // Çizgilerin kalınlığı
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
         </Button>
         <span className="sr-only">Close</span>
       </DialogPrimitive.DialogClose>

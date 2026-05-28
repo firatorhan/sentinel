@@ -22,8 +22,12 @@
     "@huin-core/react-portal": "^1.0.5",
     "@huin-core/react-primitive": "^1.0.5",
     "@huin-core/react-slot": "^1.0.5",
+    "@huin-core/react-tabs": "^1.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
