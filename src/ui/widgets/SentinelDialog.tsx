@@ -16,18 +16,7 @@ export const SentinelDialog = ({ children }: { children: React.ReactNode }) => {
     <Dialog>
       <div className="flex flex-col items-center justify-center gap-4 relative">
         <Spotlight>
-          <>
-            {children}
-
-            <DialogTrigger
-              asChild
-              className="absolute bottom-4 right-1/2 translate-x-1/2"
-            >
-              <Button variant="outline" size="sm">
-                Information
-              </Button>
-            </DialogTrigger>
-          </>
+          <DialogTrigger asChild>{children}</DialogTrigger>
         </Spotlight>
       </div>
 
