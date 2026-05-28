@@ -1,22 +1,22 @@
 import { Button } from "../components/Button";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/Tabs.tsx";
+
+import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from "../components/Dialog";
-import React from "react";
-import { Spotlight } from "./Spotlight";
 import { useSentinel } from "../../react";
 
-export const SentinelDialog = ({
-  children,
-}: {
-  children?: React.ReactNode;
-}) => {
+export const SentinelDialog = () => {
   const { openDialogId, closeDialog, dialogMeta } = useSentinel();
 
   return (
@@ -24,22 +24,23 @@ export const SentinelDialog = ({
       open={openDialogId !== null}
       onOpenChange={(open) => !open && closeDialog()}
     >
-      <div className="flex flex-col items-center justify-center gap-4 relative">
-        <Spotlight>
-          <DialogTrigger asChild>{children}</DialogTrigger>
-        </Spotlight>
-      </div>
-
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{dialogMeta.title || "Senitel"}</DialogTitle>
+          <DialogTitle>{"Senitel"}</DialogTitle>
           <DialogDescription>
-            Make changes to your profile here. Click save when you&apos;re done.
+            <Tabs className="mt-1" defaultValue="md">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="md">.md</TabsTrigger>
+                <TabsTrigger value="props">Props</TabsTrigger>
+              </TabsList>
+              <TabsContent value="md">{dialogMeta.md}</TabsContent>
+              <TabsContent value="props"></TabsContent>
+            </Tabs>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button type="button" onClick={closeDialog}>
-            Save changes
+            Copy
           </Button>
         </DialogFooter>
       </DialogContent>
