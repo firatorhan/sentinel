@@ -5,12 +5,14 @@
   "type": "module",
   "workspaces": [
     "packages/sentinel",
+    "packages/sentinel-vite-plugin",
     "playground"
   ],
   "scripts": {
+    "predev": "npm run build --workspace=sentinel-vite-plugin && npm run build --workspace=sentinel",
     "dev": "npm run dev --workspace=sentinel & npm run dev --workspace=playground",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
-    "clean": "rm -rf node_modules packages/sentinel/node_modules playground/node_modules dist packages/sentinel/dist playground/dist package-lock.json packages/sentinel/package-lock.json playground/package-lock.json"
+    "clean": "rm -rf node_modules packages/sentinel/node_modules packages/sentinel-vite-plugin/node_modules playground/node_modules packages/sentinel/dist packages/sentinel-vite-plugin/dist playground/dist package-lock.json"
   }
 }
