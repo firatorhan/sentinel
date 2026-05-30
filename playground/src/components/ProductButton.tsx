@@ -2,8 +2,6 @@ interface ProductButtonProps {
   label: string;
   onClick: () => void;
 }
-
-// @sentinel-auto
 export const ProductButton = ({ label, onClick }: ProductButtonProps) => {
   return (
     <button

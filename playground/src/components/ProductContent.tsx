@@ -6,7 +6,6 @@ interface ProductContentProps {
   price: string;
 }
 
-// @sentinel-auto(md="../assets/ProductContent.md")
 export const ProductContent = ({ title, desc, price }: ProductContentProps) => {
   return (
     <div className="p-4">
