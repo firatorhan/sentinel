@@ -1,6 +1,6 @@
 import React from "react";
 import { Portal } from "@huin-core/react-portal";
-import { useSentinel } from "../..";
+import { useSentinel } from "../../react";
 
 type SpotlightProps = {
   children: React.ReactNode;

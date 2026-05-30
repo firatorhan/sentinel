@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* tailwindi sadece sentinel için tanımladık ama playground için de kullanıyoruz */
+@source "../../../playground/src/**/*.{ts,tsx}";
+
 :root {
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
