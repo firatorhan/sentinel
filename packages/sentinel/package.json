@@ -4,7 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/sentinel.js"
+    },
     "./index.css": "./dist/sentinel.css"
   },
   "files": [

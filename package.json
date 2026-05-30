@@ -11,6 +11,6 @@
     "dev": "npm run dev --workspace=sentinel & npm run dev --workspace=playground",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
-    "clean": "rm -rf node_modules packages/sentinel/node_modules playground/node_modules dist packages/sentinel/dist"
+    "clean": "rm -rf node_modules packages/sentinel/node_modules playground/node_modules dist packages/sentinel/dist playground/dist package-lock.json packages/sentinel/package-lock.json playground/package-lock.json"
   }
 }

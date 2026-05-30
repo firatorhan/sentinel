@@ -9,8 +9,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     dts({
-      insertTypesEntry: true, // package.json içindeki "types" alanı ile uyumlu çalışır
-      include: ["src"], // Sadece src klasöründeki kodların tipini üretir
+      insertTypesEntry: true,
+      include: ["src"],
+      tsconfigPath: "./tsconfig.app.json",
     }),
   ],
   build: {
@@ -21,7 +22,7 @@ export default defineConfig({
       fileName: "sentinel",
     },
     rollupOptions: {
-      external: ["react", "react-dom"],
+      external: ["react", "react-dom", "react/jsx-runtime"],
     },
   },
 });
