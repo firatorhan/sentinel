@@ -1,4 +1,3 @@
-import { Button } from "../components/Button";
 import {
   Tabs,
   TabsContent,
@@ -13,7 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "../components/Dialog";
+} from "../components/Dialog.tsx";
 import { useSentinel } from "../../react";
 import { MarkdownHooks } from "react-markdown";
 import type { Components } from "react-markdown";

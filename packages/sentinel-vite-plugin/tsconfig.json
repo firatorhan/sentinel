@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    
+    /* Çıktı Yönetimi */
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true,
+    "declarationDir": "./dist",
+    
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}
