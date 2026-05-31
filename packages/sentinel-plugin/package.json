@@ -1,5 +1,5 @@
 {
-  "name": "sentinel-vite-plugin",
+  "name": "sentinel-plugin",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -15,8 +15,21 @@
   "scripts": {
     "build": "tsc"
   },
+  "dependencies": {
+    "unplugin": "^1.10.0",
+    "@rollup/pluginutils": "^5.1.0"
+  },
   "peerDependencies": {
-    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0",
+    "webpack": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/babel__generator": "^7.27.0",

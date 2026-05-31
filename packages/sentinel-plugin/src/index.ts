@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Plugin } from "vite";
+import { createUnplugin } from "unplugin";
 import { createFilter } from "@rollup/pluginutils";
 
 import { parse } from "@babel/parser";
@@ -17,19 +17,25 @@ export interface SentinelPluginOptions {
   exclude?: string | string[];
 }
 
-export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
+// unplugin tanımını yapıyoruz
+export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options = {}, meta) => {
   const filter = createFilter(
     options.include ?? ["**/*.tsx"],
     options.exclude ?? [],
   );
 
   return {
-    name: "sentinel-vite-plugin",
+    name: "sentinel-plugin",
+    // Çoğu build aracında transform aşamasında çalışması için 'enforce' belirtebiliriz
+    enforce: "pre",
+
+    transformInclude(id) {
+      if (id.includes("node_modules")) return false;
+      if (!id.endsWith(".tsx")) return false;
+      return filter(id);
+    },
 
     transform(code, id) {
-      if (id.includes("node_modules")) return null;
-      if (!filter(id)) return null;
-      if (!id.endsWith(".tsx")) return null;
       // @sentinel-ignore etiketi varsa, bu dosyayı tamamen atla
       if (code.includes("@sentinel-ignore")) return null;
 
@@ -38,11 +44,7 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
         plugins: ["jsx", "typescript"],
       });
 
-      // Hangi bileşenlere ne tür bir MD import'u ekleyeceğimizi takip etmek için harita
-      const componentsToWrap = new Map<
-        string,
-        { mdIdentifier: string | null }
-      >();
+      const componentsToWrap = new Map<string, { mdIdentifier: string | null }>();
 
       // 1. Aşama: Bileşenleri tespit et ve MD dosyası var mı kontrol et
       traverse(ast, {
@@ -50,17 +52,18 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
           const idNode = pathNode.node.id;
           if (t.isIdentifier(idNode) && /^[A-Z]/.test(idNode.name)) {
             const init = pathNode.node.init;
-            // Arrow function veya normal fonksiyon atamalarını yakala
-            if (
-              t.isArrowFunctionExpression(init) ||
-              t.isFunctionExpression(init)
-            ) {
+            if (t.isArrowFunctionExpression(init) || t.isFunctionExpression(init)) {
               const componentName = idNode.name;
-
               const mdPath = path.join(path.dirname(id), `${componentName}.md`);
               const mdExists = fs.existsSync(mdPath);
-              const mdIdentifier = mdExists ? `${componentName}Md` : null;
+              
+              // Eğer webpack veya vite/rollup altındaysak, MD dosyalarını izleme listesine ekle
+              // Böylece MD dosyası değiştiğinde veya yeni eklendiğinde build aracı tetiklenir.
+              if (mdExists && typeof this?.addWatchFile === "function") {
+                this.addWatchFile(mdPath);
+              }
 
+              const mdIdentifier = mdExists ? `${componentName}Md` : null;
               componentsToWrap.set(componentName, { mdIdentifier });
             }
           }
@@ -69,11 +72,14 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
           const idNode = pathNode.node.id;
           if (idNode && /^[A-Z]/.test(idNode.name)) {
             const componentName = idNode.name;
-
             const mdPath = path.join(path.dirname(id), `${componentName}.md`);
             const mdExists = fs.existsSync(mdPath);
-            const mdIdentifier = mdExists ? `${componentName}Md` : null;
 
+            if (mdExists && typeof this?.addWatchFile === "function") {
+              this.addWatchFile(mdPath);
+            }
+
+            const mdIdentifier = mdExists ? `${componentName}Md` : null;
             componentsToWrap.set(componentName, { mdIdentifier });
           }
         },
@@ -88,8 +94,7 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
 
       traverse(ast, {
         ImportDeclaration(pathNode: NodePath<t.ImportDeclaration>) {
-          if (pathNode.node.source.value === "sentinel")
-            sentinelImported = true;
+          if (pathNode.node.source.value === "sentinel") sentinelImported = true;
           if (pathNode.node.source.value === "react") reactImported = true;
         },
       });
@@ -97,12 +102,7 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
       if (!sentinelImported) {
         importsToInject.push(
           t.importDeclaration(
-            [
-              t.importSpecifier(
-                t.identifier("Sentinel"),
-                t.identifier("Sentinel"),
-              ),
-            ],
+            [t.importSpecifier(t.identifier("Sentinel"), t.identifier("Sentinel"))],
             t.stringLiteral("sentinel"),
           ),
         );
@@ -119,6 +119,8 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
       // Bulunan MD dosyalarının import tanımlarını ekle
       for (const [componentName, info] of componentsToWrap.entries()) {
         if (info.mdIdentifier) {
+          // NOT: Webpack'te raw-loader veya asset/source kuralları gerekebilir. 
+          // Vite için `?raw` eki uyumludur, ancak Webpack projesinde webpack config'e bağlıdır.
           importsToInject.push(
             t.importDeclaration(
               [t.importDefaultSpecifier(t.identifier(info.mdIdentifier))],
@@ -129,27 +131,18 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
       }
       ast.program.body.unshift(...importsToInject);
 
-      // 3. Aşama: SİHİRLİ AST DÖNÜŞÜMÜ (Bileşen Gövdesini Doğrudan Değiştirme)
-      // Fonksiyonların return ifadesini doğrudan React.createElement(Sentinel, ...) ile sarmalıyoruz.
+      // 3. Aşama: SİHİRLİ AST DÖNÜŞÜMÜ
       traverse(ast, {
         ArrowFunctionExpression(pathNode: NodePath<t.ArrowFunctionExpression>) {
           const parent = pathNode.parentPath.node;
-          if (
-            t.isVariableDeclarator(parent) &&
-            t.isIdentifier(parent.id) &&
-            componentsToWrap.has(parent.id.name)
-          ) {
+          if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
             const info = componentsToWrap.get(parent.id.name)!;
             wrapFunctionBody(pathNode, info.mdIdentifier);
           }
         },
         FunctionExpression(pathNode: NodePath<t.FunctionExpression>) {
           const parent = pathNode.parentPath.node;
-          if (
-            t.isVariableDeclarator(parent) &&
-            t.isIdentifier(parent.id) &&
-            componentsToWrap.has(parent.id.name)
-          ) {
+          if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
             const info = componentsToWrap.get(parent.id.name)!;
             wrapFunctionBody(pathNode, info.mdIdentifier);
           }
@@ -171,45 +164,27 @@ export function sentinelPlugin(options: SentinelPluginOptions = {}): Plugin {
       };
     },
   };
-}
+});
+
+// Build araçları için özelleştirilmiş export'ları dışarı açıyoruz
+export const sentinelVitePlugin = sentinelUnplugin.vite;
+export const sentinelWebpackPlugin = sentinelUnplugin.webpack;
+export const sentinelRollupPlugin = sentinelUnplugin.rollup;
+export const sentinelEsbuildPlugin = sentinelUnplugin.esbuild;
 
 /**
- * Bir fonksiyonun dönüş (return) mantığını AST düzeyinde Sentinel ile sarmalayan yardımcı fonksiyon
+ * AST sarmalama mantığı (Kodun bozulmaması adına aynen korunmuştur)
  */
-function wrapFunctionBody(
-  pathNode: NodePath<any>,
-  mdIdentifier: string | null,
-) {
+function wrapFunctionBody(pathNode: NodePath<any>, mdIdentifier: string | null) {
   const node = pathNode.node;
-  const mdValue = mdIdentifier
-    ? t.identifier(mdIdentifier)
-    : t.identifier("undefined");
-
-  // 1. ADIM: Benzersiz bir ara props değişken ismi oluşturuyoruz
-  const uniquePropsIdent =
-    pathNode.scope.generateUidIdentifier("sentinel_props");
-
-  // 2. ADIM: Fonksiyonun mevcut parametrelerini (örneğin { p }) saklıyoruz
+  const mdValue = mdIdentifier ? t.identifier(mdIdentifier) : t.identifier("undefined");
+  const uniquePropsIdent = pathNode.scope.generateUidIdentifier("sentinel_props");
   const originalParams = [...node.params];
-
-  // 3. ADIM: Orijinal parametreleri fonksiyonun en başından kaldırıp,
-  // yerine bizim tekil safe props tanımımızı koyuyoruz: (_sentinel_props)
   node.params = [uniquePropsIdent];
 
   if (t.isBlockStatement(node.body)) {
-    // 4. ADIM: Orijinal fonksiyon mantığını çalıştıracak alt fonksiyon (kapsül)
-    // Orijinal parametreleri ({ p }) bu iç fonksiyona devrediyoruz.
-    const originalInnerFunction = t.arrowFunctionExpression(
-      originalParams,
-      node.body,
-    );
-
-    // İç fonksiyonu çağırırken bizim yakaladığımız props'u paslıyoruz
-    const callOriginal = t.callExpression(originalInnerFunction, [
-      uniquePropsIdent,
-    ]);
-
-    // <Sentinel componentProps={_sentinel_props}>...</Sentinel> yapısını kuruyoruz
+    const originalInnerFunction = t.arrowFunctionExpression(originalParams, node.body);
+    const callOriginal = t.callExpression(originalInnerFunction, [uniquePropsIdent]);
     const sentinelElement = t.callExpression(
       t.memberExpression(t.identifier("React"), t.identifier("createElement")),
       [
@@ -221,22 +196,11 @@ function wrapFunctionBody(
         callOriginal,
       ],
     );
-
-    // Fonksiyon gövdesini tek bir sarmalanmış return ifadesiyle güncelliyoruz
     node.body = t.blockStatement([t.returnStatement(sentinelElement)]);
   } else {
-    // Fonksiyon gövdesi süslü parantezsiz tek satırlık arrow ise: () => JSX
     const originalExpression = node.body;
-
-    // Parametreleri destructuring ile açabilmek için anlık bir IIFE kuruyoruz
-    const originalInnerFunction = t.arrowFunctionExpression(
-      originalParams,
-      originalExpression,
-    );
-    const callOriginal = t.callExpression(originalInnerFunction, [
-      uniquePropsIdent,
-    ]);
-
+    const originalInnerFunction = t.arrowFunctionExpression(originalParams, originalExpression);
+    const callOriginal = t.callExpression(originalInnerFunction, [uniquePropsIdent]);
     const sentinelElement = t.callExpression(
       t.memberExpression(t.identifier("React"), t.identifier("createElement")),
       [
@@ -248,7 +212,6 @@ function wrapFunctionBody(
         callOriginal,
       ],
     );
-
     node.body = sentinelElement;
   }
 }
