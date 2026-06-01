@@ -3,7 +3,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../components/Tabs.tsx";
+} from "../components/Tabs";
 
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "../components/Dialog.tsx";
+} from "../components/Dialog";
 import { useSentinel } from "../../react";
 import { MarkdownHooks } from "react-markdown";
 import type { Components } from "react-markdown";

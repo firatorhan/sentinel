@@ -1,6 +1,6 @@
 import "./App.css";
-import { SentinelProvider } from "sentinel";
-import "sentinel/index.css";
+import { SentinelProvider } from "@sentinel-core/sentinel";
+import "@sentinel-core/sentinel/index.css";
 import { ProductCard } from "./components/ProductCard";
 
 const products = [

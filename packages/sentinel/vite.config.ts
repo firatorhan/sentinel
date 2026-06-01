@@ -9,7 +9,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
     dts({
-      insertTypesEntry: true,
       include: ["src"],
       tsconfigPath: "./tsconfig.app.json",
     }),
