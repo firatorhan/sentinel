@@ -21,7 +21,8 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/sentinel.js"
+      "import": "./dist/sentinel.es.js",
+      "require": "./dist/sentinel.umd.js"
     },
     "./index.css": "./dist/sentinel.css"
   },
@@ -44,17 +45,15 @@
     "@huin-core/react-tabs": "^1.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "react-markdown": "^10.1.0",
-    "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@rollup/plugin-inject": "^5.0.5",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
