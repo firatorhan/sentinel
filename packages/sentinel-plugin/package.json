@@ -1,9 +1,12 @@
 {
   "name": "@sentinel-core/sentinel-plugin",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Vite, Webpack, Rollup and Esbuild plugin for Sentinel AST transformations",
   "author": "firatorhan",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,8 +25,9 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -34,7 +38,10 @@
   },
   "dependencies": {
     "unplugin": "^1.10.0",
-    "@rollup/pluginutils": "^5.1.0"
+    "@rollup/pluginutils": "^5.1.0",
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/generator": "^7.24.0"
   },
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0",

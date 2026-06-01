@@ -6,7 +6,7 @@
     
     /* Çıktı Yönetimi */
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "src",
     "declaration": true,
     "declarationDir": "./dist",
     

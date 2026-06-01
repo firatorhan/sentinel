@@ -1,9 +1,12 @@
 {
   "name": "@sentinel-core/sentinel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Runtime intelligence for your UI.",
   "author": "firatorhan",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
