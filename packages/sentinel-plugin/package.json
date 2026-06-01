@@ -1,7 +1,24 @@
 {
-  "name": "sentinel-plugin",
-  "version": "0.0.1",
-  "private": true,
+  "name": "@sentinel-core/sentinel-plugin",
+  "version": "1.0.0",
+  "description": "Vite, Webpack, Rollup and Esbuild plugin for Sentinel AST transformations",
+  "author": "firatorhan",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/firatorhan/sentinel.git",
+    "directory": "packages/sentinel-plugin"
+  },
+  "keywords": [
+    "vite-plugin",
+    "webpack-plugin",
+    "unplugin",
+    "sentinel",
+    "react",
+    "huinhub",
+    "ast"
+  ],
   "type": "module",
   "exports": {
     ".": {

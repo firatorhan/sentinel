@@ -103,7 +103,7 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
         importsToInject.push(
           t.importDeclaration(
             [t.importSpecifier(t.identifier("Sentinel"), t.identifier("Sentinel"))],
-            t.stringLiteral("sentinel"),
+            t.stringLiteral("@sentinel-core/sentinel"),
           ),
         );
       }
