@@ -58,7 +58,6 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
               const mdExists = fs.existsSync(mdPath);
               
               // Eğer webpack veya vite/rollup altındaysak, MD dosyalarını izleme listesine ekle
-              // Böylece MD dosyası değiştiğinde veya yeni eklendiğinde build aracı tetiklenir.
               if (mdExists && typeof this?.addWatchFile === "function") {
                 this.addWatchFile(mdPath);
               }
@@ -90,12 +89,26 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
       // 2. Aşama: Gerekli Global Importları Hazırla
       const importsToInject: t.ImportDeclaration[] = [];
       let sentinelImported = false;
-      let reactImported = false;
+      let reactImportedAsGlobal = false;
 
       traverse(ast, {
         ImportDeclaration(pathNode: NodePath<t.ImportDeclaration>) {
-          if (pathNode.node.source.value === "sentinel") sentinelImported = true;
-          if (pathNode.node.source.value === "react") reactImported = true;
+          if (pathNode.node.source.value === "@sentinel-core/sentinel") {
+            sentinelImported = true;
+          }
+          
+          if (pathNode.node.source.value === "react") {
+            // Sadece 'react'tan import yapılması yetmez, 'React' adında bir namespace veya default import var mı bakıyoruz
+            const hasReactIdentifier = pathNode.node.specifiers.some(specifier => {
+              return (
+                (t.isImportNamespaceSpecifier(specifier) && specifier.local.name === "React") ||
+                (t.isImportDefaultSpecifier(specifier) && specifier.local.name === "React")
+              );
+            });
+            if (hasReactIdentifier) {
+              reactImportedAsGlobal = true;
+            }
+          }
         },
       });
 
@@ -107,7 +120,9 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
           ),
         );
       }
-      if (!reactImported) {
+      
+      // Eğer 'React' objesi dosya başında global olarak import edilmediyse enjekte et
+      if (!reactImportedAsGlobal) {
         importsToInject.push(
           t.importDeclaration(
             [t.importNamespaceSpecifier(t.identifier("React"))],
@@ -119,8 +134,6 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
       // Bulunan MD dosyalarının import tanımlarını ekle
       for (const [componentName, info] of componentsToWrap.entries()) {
         if (info.mdIdentifier) {
-          // NOT: Webpack'te raw-loader veya asset/source kuralları gerekebilir. 
-          // Vite için `?raw` eki uyumludur, ancak Webpack projesinde webpack config'e bağlıdır.
           importsToInject.push(
             t.importDeclaration(
               [t.importDefaultSpecifier(t.identifier(info.mdIdentifier))],
@@ -173,7 +186,7 @@ export const sentinelRollupPlugin = sentinelUnplugin.rollup;
 export const sentinelEsbuildPlugin = sentinelUnplugin.esbuild;
 
 /**
- * AST sarmalama mantığı (Kodun bozulmaması adına aynen korunmuştur)
+ * AST sarmalama mantığı
  */
 function wrapFunctionBody(pathNode: NodePath<any>, mdIdentifier: string | null) {
   const node = pathNode.node;
