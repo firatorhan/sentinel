@@ -1,12 +1,31 @@
 {
-  "name": "sentinel",
-  "private": true,
-  "version": "0.0.1",
+  "name": "@sentinel-core/sentinel",
+  "version": "1.0.4",
+  "description": "Runtime intelligence for your UI.",
+  "author": "firatorhan",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/firatorhan/sentinel.git",
+    "directory": "packages/sentinel"
+  },
+  "keywords": [
+    "sentinel",
+    "react-components",
+    "tailwind",
+    "huinhub",
+    "markdown-dialog"
+  ],
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/sentinel.js"
+      "import": "./dist/sentinel.es.js",
+      "require": "./dist/sentinel.umd.js"
     },
     "./index.css": "./dist/sentinel.css"
   },
@@ -21,6 +40,7 @@
   },
   "dependencies": {
     "@huin-core/react-dialog": "^1.0.5",
+    "@huin-core/react-id": "^1.0.5",
     "@huin-core/react-label": "^1.0.5",
     "@huin-core/react-portal": "^1.0.5",
     "@huin-core/react-primitive": "^1.0.5",
@@ -28,17 +48,15 @@
     "@huin-core/react-tabs": "^1.0.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "react-markdown": "^10.1.0",
-    "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@rollup/plugin-inject": "^5.0.5",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",

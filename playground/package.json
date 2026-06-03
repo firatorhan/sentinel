@@ -12,8 +12,8 @@
   "dependencies": {
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "sentinel": "*",
-    "sentinel-plugin": "*"
+    "@sentinel-core/sentinel": "*",
+    "@sentinel-core/sentinel-plugin": "*"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

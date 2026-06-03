@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { sentinelVitePlugin } from "sentinel-plugin";
+import { sentinelVitePlugin } from "@sentinel-core/sentinel-plugin";
 
 export default defineConfig({
   plugins: [
