@@ -15,6 +15,7 @@ import {
 } from "../components/Dialog";
 import { useSentinel } from "../../react";
 import { MarkdownViewer } from "./MarkdownViewer"; // <-- Yeni component'i import ediyoruz
+import React from "react";
 
 export const SentinelDialog = () => {
   const { openDialogId, closeDialog, dialogMeta } = useSentinel();

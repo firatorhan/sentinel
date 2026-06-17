@@ -12,20 +12,24 @@ const generate = (generateModule as any).default || generateModule;
 export function transformCode(code: string, id: string, addWatchFile?: (path: string) => void) {
   if (code.includes("@sentinel-ignore")) return null;
 
+  const isTS = id.endsWith(".ts") || id.endsWith(".tsx");
+  const babelPlugins: ("jsx" | "typescript")[] = ["jsx"];
+  if (isTS) babelPlugins.push("typescript");
+
   const ast = parse(code, {
     sourceType: "module",
-    plugins: ["jsx", "typescript"],
+    plugins: babelPlugins,
   });
 
   // 1 & 2. Aşama: Dosyayı tara ve analiz et
-  const { componentsToWrap, sentinelImported, reactImportedAsGlobal } = scanFile(ast, id, addWatchFile);
+  const { componentsToWrap, sentinelComponentImported, reactImportedAsGlobal } = scanFile(ast, id, addWatchFile);
 
   if (componentsToWrap.size === 0) return null;
 
   // Global Import'ların Hazırlanması ve Enjekte Edilmesi
   const importsToInject: t.ImportDeclaration[] = [];
 
-  if (!sentinelImported) {
+  if (!sentinelComponentImported) {
     importsToInject.push(
       t.importDeclaration(
         [t.importSpecifier(t.identifier("Sentinel"), t.identifier("Sentinel"))],

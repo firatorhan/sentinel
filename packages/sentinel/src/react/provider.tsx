@@ -87,9 +87,17 @@ export const SentinelProvider = ({
   );
 };
 
+const noopContext: SentinelContextType = {
+  activeId: null,
+  activeRect: null,
+  openDialogId: null,
+  dialogMeta: {},
+  registerHover: () => {},
+  unregisterHover: () => {},
+  openDialog: () => {},
+  closeDialog: () => {},
+};
+
 export const useSentinel = () => {
-  const context = useContext(SentinelContext);
-  if (!context)
-    throw new Error("useSentinel must be used within a SentinelProvider");
-  return context;
+  return useContext(SentinelContext) ?? noopContext;
 };
