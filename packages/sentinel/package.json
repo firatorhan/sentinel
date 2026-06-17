@@ -25,7 +25,7 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/sentinel.es.js",
-      "require": "./dist/sentinel.umd.js"
+      "require": "./dist/sentinel.cjs"
     },
     "./index.css": "./dist/sentinel.css"
   },

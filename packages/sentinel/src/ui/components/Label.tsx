@@ -4,7 +4,7 @@ import * as LabelPrimitive from "@huin-core/react-label";
 import { cn } from "../../utils/cn";
 
 const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
 >(({ className, ...props }, ref) => (
   <LabelPrimitive.Label

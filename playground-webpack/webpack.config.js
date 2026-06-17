@@ -1,6 +1,7 @@
 const path = require("path");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const { sentinelWebpackPlugin } = require("@sentinel-core/sentinel-plugin");
 
 module.exports = {
   mode: "development",
@@ -14,7 +15,12 @@ module.exports = {
   },
 
   resolve: {
-    extensions: [".js", ".jsx"],
+    extensions: [".js", ".jsx"], // import { X } from "./Component" yazarken uzantı belirtmene gerek kalmaz — 
+    conditionNames: ["require", "default"],
+    alias: {
+      react: path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+    },
   },
 
   module: {
@@ -28,11 +34,19 @@ module.exports = {
         test: /\.css$/,
         use: ["style-loader", "css-loader"],
       },
+      {
+        test: /\.md$/,
+        resourceQuery: /raw/,
+        type: "asset/source",
+      },
     ],
   },
   
 
   plugins: [
+    sentinelWebpackPlugin({
+     include: ["src/components/**/*.jsx"],
+    }),
     new webpack.HotModuleReplacementPlugin(),
     new HtmlWebpackPlugin({
       template: "./public/index.html",

@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import * as TabsPrimitive from "@huin-core/react-tabs";
 import { cn } from "../../utils/cn";

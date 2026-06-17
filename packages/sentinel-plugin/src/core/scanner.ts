@@ -11,13 +11,13 @@ export interface ComponentInfo {
 
 export interface ScanResult {
   componentsToWrap: Map<string, ComponentInfo>;
-  sentinelImported: boolean;
+  sentinelComponentImported: boolean;
   reactImportedAsGlobal: boolean;
 }
 
 export function scanFile(ast: t.File, id: string, addWatchFile?: (path: string) => void): ScanResult {
   const componentsToWrap = new Map<string, ComponentInfo>();
-  let sentinelImported = false;
+  let sentinelComponentImported = false;
   let reactImportedAsGlobal = false;
 
   const checkAndRegisterComponent = (componentName: string) => {
@@ -53,7 +53,13 @@ export function scanFile(ast: t.File, id: string, addWatchFile?: (path: string) 
     // 2. Import Durum Kontrolleri
     ImportDeclaration(pathNode: NodePath<t.ImportDeclaration>) {
       if (pathNode.node.source.value === "@sentinel-core/sentinel") {
-        sentinelImported = true;
+        const hasSentinelSpecifier = pathNode.node.specifiers.some(
+          (s) =>
+            t.isImportSpecifier(s) &&
+            t.isIdentifier(s.imported) &&
+            s.imported.name === "Sentinel",
+        );
+        if (hasSentinelSpecifier) sentinelComponentImported = true;
       }
       
       if (pathNode.node.source.value === "react") {
@@ -70,5 +76,5 @@ export function scanFile(ast: t.File, id: string, addWatchFile?: (path: string) 
     },
   });
 
-  return { componentsToWrap, sentinelImported, reactImportedAsGlobal };
+  return { componentsToWrap, sentinelComponentImported, reactImportedAsGlobal };
 }

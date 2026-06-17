@@ -25,13 +25,12 @@ export default defineConfig({
   build: {
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
-      name: "sentinel",
-      formats: ["es"],
-      fileName: (format) => `sentinel.${format}.js`,
+      name: "Sentinel",
+      formats: ["es", "cjs"],
+      fileName: (format) => format === "cjs" ? "sentinel.cjs" : `sentinel.${format}.js`,
     },
     rollupOptions: {
       external: ["react", "react-dom"],
-
     },
   },
 });

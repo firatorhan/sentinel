@@ -7,9 +7,11 @@ export interface SentinelPluginOptions {
   exclude?: string | string[];
 }
 
+const JSX_EXTENSIONS = [".tsx", ".jsx", ".js"];
+
 export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options = {}, meta) => {
   const filter = createFilter(
-    options.include ?? ["**/*.tsx"],
+    options.include ?? ["**/*.tsx", "**/*.jsx"],
     options.exclude ?? [],
   );
 
@@ -19,7 +21,7 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
 
     transformInclude(id) {
       if (id.includes("node_modules")) return false;
-      if (!id.endsWith(".tsx")) return false;
+      if (!JSX_EXTENSIONS.some((ext) => id.endsWith(ext))) return false;
       return filter(id);
     },
 
