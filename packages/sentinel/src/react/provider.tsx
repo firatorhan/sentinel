@@ -1,30 +1,51 @@
-import React, { createContext, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { SentinelDialog } from "../ui/widgets/SentinelDialog";
 import { Spotlight } from "../ui/widgets/Spotlight";
 
-type SentinelContextType = {
+type DialogMeta = {
+  componentName?: string;
+  sourceFile?: string;
+  renderCount?: number;
+  propHistory?: Record<string, any>[];
+  md?: string;
+  componentProps?: Record<string, any>;
+};
+
+type SentinelInteractionContextType = {
   activeId: string | null;
   activeRect: DOMRect | null;
-  openDialogId: string | null;
-  dialogMeta: {
-    title?: string;
-    md?: string;
-    componentProps?: Record<string, any>;
-  };
   registerHover: (id: string, rect: DOMRect) => void;
   unregisterHover: (id: string) => void;
   openDialog: (
     id: string,
-    title?: string,
+    componentName?: string,
     md?: string,
     componentProps?: Record<string, any>,
+    sourceFile?: string,
+    renderCount?: number,
+    propHistory?: Record<string, any>[],
   ) => void;
+};
+
+type SentinelDialogContextType = {
+  openDialogId: string | null;
+  dialogMeta: DialogMeta;
   closeDialog: () => void;
 };
 
-export const SentinelContext = createContext<SentinelContextType | undefined>(
-  undefined,
-);
+const SentinelInteractionContext = createContext<
+  SentinelInteractionContextType | undefined
+>(undefined);
+
+const SentinelDialogContext = createContext<
+  SentinelDialogContextType | undefined
+>(undefined);
 
 export const SentinelProvider = ({
   children,
@@ -34,70 +55,89 @@ export const SentinelProvider = ({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
-  const [dialogMeta, setDialogMeta] = useState<
-    SentinelContextType["dialogMeta"]
-  >({});
+  const [dialogMeta, setDialogMeta] = useState<DialogMeta>({});
 
-  const registerHover = (id: string, rect: DOMRect) => {
+  const registerHover = useCallback((id: string, rect: DOMRect) => {
     setActiveId(id);
     setActiveRect(rect);
-  };
+  }, []);
 
-  const unregisterHover = (id: string) => {
-    setActiveId((prev) => (prev === id ? null : prev));
-    setActiveRect((prev) =>
-      prev?.width && activeId === id ? null : activeRect,
-    );
-  };
+  const unregisterHover = useCallback((id: string) => {
+    setActiveId((prev) => {
+      if (prev === id) {
+        setActiveRect(null);
+        return null;
+      }
+      return prev;
+    });
+  }, []);
 
-  const openDialog = (
-    id: string,
-    title?: string,
-    md?: string,
-    componentProps?: Record<string, any>,
-  ) => {
-    setOpenDialogId(id);
-    setDialogMeta({ title, md, componentProps });
-  };
+  const openDialog = useCallback(
+    (
+      id: string,
+      componentName?: string,
+      md?: string,
+      componentProps?: Record<string, any>,
+      sourceFile?: string,
+      renderCount?: number,
+      propHistory?: Record<string, any>[],
+    ) => {
+      setOpenDialogId(id);
+      setDialogMeta({ componentName, sourceFile, renderCount, propHistory, md, componentProps });
+    },
+    [],
+  );
 
-  const closeDialog = () => {
+  const closeDialog = useCallback(() => {
     setOpenDialogId(null);
     setDialogMeta({});
-  };
+  }, []);
+
+  const interactionValue = useMemo(
+    () => ({ activeId, activeRect, registerHover, unregisterHover, openDialog }),
+    [activeId, activeRect, registerHover, unregisterHover, openDialog],
+  );
+
+  const dialogValue = useMemo(
+    () => ({ openDialogId, dialogMeta, closeDialog }),
+    [openDialogId, dialogMeta, closeDialog],
+  );
 
   return (
-    <SentinelContext.Provider
-      value={{
-        activeId,
-        activeRect,
-        openDialogId,
-        dialogMeta,
-        registerHover,
-        unregisterHover,
-        openDialog,
-        closeDialog,
-      }}
-    >
-      {children}
-
-      <Spotlight>
-        <SentinelDialog />
-      </Spotlight>
-    </SentinelContext.Provider>
+    <SentinelInteractionContext.Provider value={interactionValue}>
+      <SentinelDialogContext.Provider value={dialogValue}>
+        {children}
+        <Spotlight>
+          <SentinelDialog />
+        </Spotlight>
+      </SentinelDialogContext.Provider>
+    </SentinelInteractionContext.Provider>
   );
 };
 
-const noopContext: SentinelContextType = {
+const noopInteraction: SentinelInteractionContextType = {
   activeId: null,
   activeRect: null,
-  openDialogId: null,
-  dialogMeta: {},
   registerHover: () => {},
   unregisterHover: () => {},
   openDialog: () => {},
+};
+
+const noopDialog: SentinelDialogContextType = {
+  openDialogId: null,
+  dialogMeta: {},
   closeDialog: () => {},
 };
 
+export const useSentinelInteraction = () =>
+  useContext(SentinelInteractionContext) ?? noopInteraction;
+
+export const useSentinelDialog = () =>
+  useContext(SentinelDialogContext) ?? noopDialog;
+
+// Geriye dönük uyumluluk için birleşik hook
 export const useSentinel = () => {
-  return useContext(SentinelContext) ?? noopContext;
+  const interaction = useSentinelInteraction();
+  const dialog = useSentinelDialog();
+  return { ...interaction, ...dialog };
 };

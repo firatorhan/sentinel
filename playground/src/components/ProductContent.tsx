@@ -4,9 +4,10 @@ interface ProductContentProps {
   title: string;
   desc: string;
   price: string;
+  serverHtml?: string;
 }
 
-export const ProductContent = ({ title, desc, price }: ProductContentProps) => {
+export const ProductContent = ({ title, desc, price, serverHtml }: ProductContentProps) => {
   return (
     <div className="p-4">
       <h3 className="text-lg font-semibold mb-2">{title}</h3>

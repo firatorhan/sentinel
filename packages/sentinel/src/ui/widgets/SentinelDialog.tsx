@@ -13,12 +13,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from "../components/Dialog";
-import { useSentinel } from "../../react";
-import { MarkdownViewer } from "./MarkdownViewer"; // <-- Yeni component'i import ediyoruz
+import { useSentinelDialog } from "../../react";
+import { MarkdownViewer } from "./MarkdownViewer";
+import { PropsViewer } from "./PropsViewer";
 import React from "react";
 
+const getDisplayPath = (sourceFile: string) => {
+  const [filePath] = sourceFile.split(":");
+  const segments = filePath.replace(/\\/g, "/").split("/");
+  return segments.slice(-3).join("/");
+};
+
 export const SentinelDialog = () => {
-  const { openDialogId, closeDialog, dialogMeta } = useSentinel();
+  const { openDialogId, closeDialog, dialogMeta } = useSentinelDialog();
 
   return (
     <Dialog
@@ -28,7 +35,32 @@ export const SentinelDialog = () => {
       <Tabs className="mt-1" defaultValue="md">
         <DialogContent className="h-fit overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{"Sentinel"}</DialogTitle>
+            <DialogTitle className="text-center">
+              <span className="flex items-center justify-center gap-2">
+                {dialogMeta?.componentName ? (
+                  <span>
+                    <span className="text-muted-foreground font-normal">&lt;</span>
+                    {dialogMeta.componentName}
+                    <span className="text-muted-foreground font-normal"> /&gt;</span>
+                  </span>
+                ) : (
+                  "Sentinel"
+                )}
+                {dialogMeta?.renderCount !== undefined && (
+                  <span className="text-xs font-normal bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                    ×{dialogMeta.renderCount}
+                  </span>
+                )}
+              </span>
+              {dialogMeta?.sourceFile && (
+                <a
+                  href={`vscode://file/${dialogMeta.sourceFile}`}
+                  className="block text-xs font-normal text-muted-foreground hover:text-sky-400 transition-colors mt-0.5 font-mono"
+                >
+                  {getDisplayPath(dialogMeta.sourceFile)}
+                </a>
+              )}
+            </DialogTitle>
             <DialogDescription>
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="md">.md</TabsTrigger>
@@ -38,22 +70,20 @@ export const SentinelDialog = () => {
               </TabsList>
             </DialogDescription>
           </DialogHeader>
-          
+
           <TabsContent value="md">
-            {/* Yeni ayırdığımız bileşeni burada tertemiz çağırıyoruz */}
             <MarkdownViewer content={dialogMeta?.md || ""} />
           </TabsContent>
-          
+
           <TabsContent value="props-tracker">
             {dialogMeta.componentProps && (
-              <pre className="bg-primary text-primary-foreground p-4 rounded-md overflow-x-auto h-full">
-                <code className="text-wrap block whitespace-pre text-sm">
-                  {JSON.stringify(dialogMeta.componentProps, null, 2)}
-                </code>
-              </pre>
+              <PropsViewer
+                data={dialogMeta.componentProps as Record<string, unknown>}
+                history={dialogMeta.propHistory}
+              />
             )}
           </TabsContent>
-          
+
           <TabsContent value="api-layer"></TabsContent>
           <TabsContent value="event-tracker"></TabsContent>
           <DialogFooter />

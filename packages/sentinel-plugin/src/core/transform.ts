@@ -65,29 +65,35 @@ export function transformCode(code: string, id: string, isInInclude: boolean, ad
     ArrowFunctionExpression(pathNode: NodePath<t.ArrowFunctionExpression>) {
       const parent = pathNode.parentPath.node;
       if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
-        const info = componentsToWrap.get(parent.id.name)!;
-        wrapFunctionBody(pathNode, info.mdIdentifier);
+        const name = parent.id.name;
+        const info = componentsToWrap.get(name)!;
+        const line = pathNode.node.loc?.start.line ?? 1;
+        wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
       }
     },
     FunctionExpression(pathNode: NodePath<t.FunctionExpression>) {
       const parent = pathNode.parentPath.node;
       if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
-        const info = componentsToWrap.get(parent.id.name)!;
-        wrapFunctionBody(pathNode, info.mdIdentifier);
+        const name = parent.id.name;
+        const info = componentsToWrap.get(name)!;
+        const line = pathNode.node.loc?.start.line ?? 1;
+        wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
       }
     },
     FunctionDeclaration(pathNode: NodePath<t.FunctionDeclaration>) {
       const idNode = pathNode.node.id;
       if (idNode && componentsToWrap.has(idNode.name)) {
         const info = componentsToWrap.get(idNode.name)!;
-        wrapFunctionBody(pathNode, info.mdIdentifier);
+        const line = pathNode.node.loc?.start.line ?? 1;
+        wrapFunctionBody(pathNode, idNode.name, `${id}:${line}`, info.mdIdentifier);
       }
     },
     ClassDeclaration(pathNode: NodePath<t.ClassDeclaration>) {
       const idNode = pathNode.node.id;
       if (idNode && componentsToWrap.has(idNode.name)) {
         const info = componentsToWrap.get(idNode.name)!;
-        wrapClassRenderMethod(pathNode, info.mdIdentifier);
+        const line = pathNode.node.loc?.start.line ?? 1;
+        wrapClassRenderMethod(pathNode, idNode.name, `${id}:${line}`, info.mdIdentifier);
       }
     },
   });

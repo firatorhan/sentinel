@@ -8,6 +8,7 @@ interface ProductCardProps {
     desc: string;
     price: string;
     image: string;
+    serverHtml?: string;
   };
 }
 
@@ -15,7 +16,7 @@ export const ProductCard = ({ p }: ProductCardProps) => {
   return (
     <div className="rounded-2xl overflow-hidden bg-white shadow-lg w-64">
       <ProductImage src={p.image} />
-      <ProductContent title={p.title} desc={p.desc} price={p.price} />
+      <ProductContent title={p.title} desc={p.desc} price={p.price} serverHtml={p.serverHtml} />
     </div>
   );
 };
