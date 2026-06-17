@@ -4,13 +4,14 @@ import { default as generateModule } from "@babel/generator";
 import * as t from "@babel/types";
 
 import { scanFile } from "./scanner";
-import { wrapFunctionBody } from "./wrapper";
+import { wrapFunctionBody, wrapClassRenderMethod } from "./wrapper";
 
 const traverse = (traverseModule as any).default || traverseModule;
 const generate = (generateModule as any).default || generateModule;
 
-export function transformCode(code: string, id: string, addWatchFile?: (path: string) => void) {
-  if (code.includes("@sentinel-ignore")) return null;
+export function transformCode(code: string, id: string, isInInclude: boolean, addWatchFile?: (path: string) => void) {
+  const firstNonEmptyLine = code.split("\n").find((l) => l.trim().length > 0)?.trim() ?? "";
+  if (firstNonEmptyLine === "// @sentinel-ignore") return null;
 
   const isTS = id.endsWith(".ts") || id.endsWith(".tsx");
   const babelPlugins: ("jsx" | "typescript")[] = ["jsx"];
@@ -21,8 +22,7 @@ export function transformCode(code: string, id: string, addWatchFile?: (path: st
     plugins: babelPlugins,
   });
 
-  // 1 & 2. Aşama: Dosyayı tara ve analiz et
-  const { componentsToWrap, sentinelComponentImported, reactImportedAsGlobal } = scanFile(ast, id, addWatchFile);
+  const { componentsToWrap, sentinelComponentImported, reactImportedAsGlobal } = scanFile(ast, id, code, isInInclude, addWatchFile);
 
   if (componentsToWrap.size === 0) return null;
 
@@ -81,6 +81,13 @@ export function transformCode(code: string, id: string, addWatchFile?: (path: st
       if (idNode && componentsToWrap.has(idNode.name)) {
         const info = componentsToWrap.get(idNode.name)!;
         wrapFunctionBody(pathNode, info.mdIdentifier);
+      }
+    },
+    ClassDeclaration(pathNode: NodePath<t.ClassDeclaration>) {
+      const idNode = pathNode.node.id;
+      if (idNode && componentsToWrap.has(idNode.name)) {
+        const info = componentsToWrap.get(idNode.name)!;
+        wrapClassRenderMethod(pathNode, info.mdIdentifier);
       }
     },
   });
