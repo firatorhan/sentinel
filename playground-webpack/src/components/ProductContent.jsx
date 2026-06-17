@@ -2,7 +2,7 @@ import { ProductButton } from "./ProductButton";
 import React from "react";
 
 
-export const ProductContent = ({ title, desc, price }) => {
+export const ProductContent = ({ title, desc, price, serverHtml }) => {
   return (
     <div className="p-4">
       <h3 className="text-lg font-semibold mb-2">{title}</h3>

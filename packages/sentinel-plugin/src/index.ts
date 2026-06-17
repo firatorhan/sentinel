@@ -22,16 +22,18 @@ export const sentinelUnplugin = createUnplugin<SentinelPluginOptions>((options =
     transformInclude(id) {
       if (id.includes("node_modules")) return false;
       if (!JSX_EXTENSIONS.some((ext) => id.endsWith(ext))) return false;
-      return filter(id);
+      return true;
     },
 
     transform(code, id) {
-      // Build context'indeki addWatchFile metodunu transformCode'a paslıyoruz
-      const addWatchFile = typeof (this as any)?.addWatchFile === "function" 
-        ? (path: string) => (this as any).addWatchFile(path) 
+      const isInInclude = filter(id);
+      if (!isInInclude && !code.includes("@sentinel-watch")) return null;
+
+      const addWatchFile = typeof (this as any)?.addWatchFile === "function"
+        ? (path: string) => (this as any).addWatchFile(path)
         : undefined;
 
-      return transformCode(code, id, addWatchFile);
+      return transformCode(code, id, isInInclude, addWatchFile);
     },
   };
 });

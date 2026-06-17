@@ -20,10 +20,12 @@ const products = [
   },
   {
     id: 3,
-    title: "Classic White",
+    title: "Classic Whitee",
     desc: "Minimal tasarım, her stile uyum sağlayan klasik sneaker.",
     price: "₺1.199",
     image: "https://images.unsplash.com/photo-1549298916-b41d501d3772",
+    serverHtml:
+      '<section class="product-detail" data-id="3"><div class="container"><header class="product-header"><h1 class="title">Classic White</h1><span class="badge badge--new">Yeni Sezon</span></header><div class="product-body"><p class="description">Minimal tasarım felsefesiyle üretilmiş bu sneaker, her stile kolayca uyum sağlar. Özel dokuma upper yüzeyi ve memory foam tabanlığı ile uzun süreli konfor sunar.</p><ul class="features"><li>Yıkanabilir örgü üst yüzey</li><li>Memory foam iç taban</li><li>Kaymaz dış taban</li><li>%100 vegan malzeme</li></ul><div class="shipping"><span class="badge">Ücretsiz Kargo</span><span class="badge">30 Gün İade</span><span class="badge">2 Yıl Garanti</span></div></div></div></section>',
   },
 ];
 

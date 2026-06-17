@@ -1,6 +1,6 @@
 import React from "react";
 import { Portal } from "@huin-core/react-portal";
-import { useSentinel } from "../../react";
+import { useSentinelInteraction } from "../../react";
 
 type SpotlightProps = {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ type SpotlightProps = {
 
 export const Spotlight = ({ children, active = true }: SpotlightProps) => {
   if (!active) return <>{children}</>;
-  const { activeRect } = useSentinel();
+  const { activeRect } = useSentinelInteraction();
   const centerX = activeRect ? activeRect.left + activeRect.width / 2 : 0;
   const centerY = activeRect ? activeRect.top + activeRect.height / 2 : 0;
 
@@ -18,7 +18,7 @@ export const Spotlight = ({ children, active = true }: SpotlightProps) => {
       <Portal>
         {activeRect && (
           <div
-            className="pointer-events-none fixed inset-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            className="pointer-events-none fixed inset-0 z-[999] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{
               background: `
                 radial-gradient(

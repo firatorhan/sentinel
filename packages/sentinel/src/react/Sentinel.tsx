@@ -1,22 +1,39 @@
-import React from "react";
-import { useSentinel } from "./provider";
+import React, { useRef } from "react";
+import { useSentinelInteraction } from "./provider";
 import { useId } from "@huin-core/react-id";
+import { safeSerialize } from "../utils/safeSerialize";
+
 type SentinelProps = {
   children: React.ReactNode;
-  dialogTitle?: string;
+  componentName?: string;
+  sourceFile?: string;
+  renderCount?: number;
   dialogMd?: string;
   componentProps?: Record<string, any>;
 };
 
 export const Sentinel = ({
   children,
-  dialogTitle,
+  componentName,
+  sourceFile,
+  renderCount,
   dialogMd,
   componentProps,
 }: SentinelProps) => {
   const id = useId();
   const { activeId, registerHover, unregisterHover, openDialog } =
-    useSentinel();
+    useSentinelInteraction();
+
+  const propHistoryRef = useRef<Record<string, any>[]>([]);
+  const prevPropsRef = useRef<string>("");
+  const safeProps = componentProps
+    ? (safeSerialize(componentProps) as Record<string, unknown>)
+    : undefined;
+  const currentPropsStr = safeProps ? JSON.stringify(safeProps) : "";
+  if (safeProps && currentPropsStr !== prevPropsRef.current) {
+    prevPropsRef.current = currentPropsStr;
+    propHistoryRef.current = [safeProps, ...propHistoryRef.current].slice(0, 6);
+  }
 
   const isDirectlyActive = activeId === id;
 
@@ -32,7 +49,15 @@ export const Sentinel = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openDialog(id, dialogTitle, dialogMd, componentProps);
+    openDialog(
+      id,
+      componentName,
+      dialogMd,
+      safeProps,
+      sourceFile,
+      renderCount,
+      propHistoryRef.current,
+    );
   };
 
   return (
@@ -41,14 +66,14 @@ export const Sentinel = ({
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
       style={{
-        zIndex: isDirectlyActive ? 51 : "initial",
+        zIndex: isDirectlyActive ? 1000 : "initial",
       }}
       className="relative transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
     >
       <div
         className="w-full h-full p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
         style={{
-          zIndex: isDirectlyActive ? 51 : "auto",
+          zIndex: isDirectlyActive ? 1000 : "auto",
           border: isDirectlyActive
             ? "2px dashed rgba(99, 102, 241, 0.55)"
             : "2px solid transparent",
