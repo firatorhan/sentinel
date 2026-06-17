@@ -1,19 +1,20 @@
 const path = require("path");
+const webpack = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
   mode: "development",
 
-  entry: "./src/index.jsx",
+  entry: ["webpack-hot-middleware/client?reload=true", "./src/index.jsx"],
 
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "bundle.js",
-    clean: true
+    publicPath: "/",
   },
 
   resolve: {
-    extensions: [".js", ".jsx"]
+    extensions: [".js", ".jsx"],
   },
 
   module: {
@@ -21,27 +22,20 @@ module.exports = {
       {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
-        use: "babel-loader"
+        use: "babel-loader",
       },
-       {
+      {
         test: /\.css$/,
-        use: [
-          "style-loader",
-          "css-loader"
-        ]
-      }
-    ]
+        use: ["style-loader", "css-loader"],
+      },
+    ],
   },
+  
 
   plugins: [
+    new webpack.HotModuleReplacementPlugin(),
     new HtmlWebpackPlugin({
-      template: "./public/index.html"
-    })
+      template: "./public/index.html",
+    }),
   ],
-
-  devServer: {
-    port: 3000,
-    open: true,
-    hot: true
-  }
 };

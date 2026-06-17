@@ -2,7 +2,6 @@ import React from "react";
 import { SentinelProvider } from "@sentinel-core/sentinel";
 import { ProductCard } from "./components/ProductCard.jsx";
 
-
 function App() {
   const products = [
     {
@@ -29,14 +28,13 @@ function App() {
   ];
   return (
     <section className="min-h-screen flex items-center justify-center bg-background">
-     
+      <SentinelProvider>
         <div className="flex gap-4 flex-nowrap justify-start">
           {products.map((product) => (
             <ProductCard key={product.id} p={product} />
           ))}
-          aa
         </div>
-     
+      </SentinelProvider>
     </section>
   );
 }
