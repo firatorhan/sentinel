@@ -15,12 +15,8 @@ module.exports = {
   },
 
   resolve: {
-    extensions: [".js", ".jsx"], // import { X } from "./Component" yazarken uzantı belirtmene gerek kalmaz — 
+    extensions: [".js", ".jsx"],
     conditionNames: ["require", "default"],
-    alias: {
-      react: path.resolve(__dirname, "node_modules/react"),
-      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
-    },
   },
 
   module: {
