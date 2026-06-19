@@ -12,12 +12,14 @@ import { cn } from "../../utils/cn";
 export const SentinelToolbar = () => {
   const { isActive, setIsActive, showOutlines, setShowOutlines, highlightName, setHighlightName } =
     useSentinelInteraction();
+  const [open, setOpen] = React.useState(false);
 
   return (
     <Portal>
       <div className="fixed bottom-4 right-4 z-[9999]">
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
+            onClick={() => setOpen((o) => !o)}
             className={cn(
               "flex h-10 w-10 items-center justify-center rounded-full border shadow-lg transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
               isActive
@@ -33,7 +35,7 @@ export const SentinelToolbar = () => {
                 <ScanEye size={14} className="text-muted-foreground" />
                 <span className="text-sm font-semibold">Sentinel</span>
               </div>
-              <kbd className="text-sm text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+              <kbd className="text-sm text-muted-foreground bg-muted px-1.5! py-0.5! rounded font-mono">
                 ⌃ ⇧ S
               </kbd>
             </div>

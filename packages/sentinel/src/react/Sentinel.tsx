@@ -86,7 +86,7 @@ export const Sentinel = ({
       className="relative transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
     >
       <div
-        className="w-full h-full p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="w-full h-full p-0.5! transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
         style={{
           zIndex: isDirectlyActive ? 1000 : "auto",
           border: getBorder(),
