@@ -5,12 +5,12 @@ import { cn } from "../../utils/cn";
 import { Button } from "./Button";
 
 const dialogVariants = cva(
-  "fixed z-[999] gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "fixed z-[999] gap-4 bg-background !p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
     variants: {
       variant: {
         center:
-          "left-[50%] top-[50%] grid w-full h-full max-w-5/6 max-h-5/6 translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
+          "left-[50%] top-[50%] grid w-full h-full max-w-5/6 max-h-5/6 translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background !p-6 shadow-lg duration-200 sm:rounded-lg",
         top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
         bottom:
           "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",

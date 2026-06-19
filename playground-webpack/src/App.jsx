@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { SentinelProvider } from "@sentinel-core/sentinel";
 import { ProductCard } from "./components/ProductCard.jsx";
+import { mockStore } from "./mockStore.js";
+import { mockSagaMonitor } from "./mockSagaMonitor.js";
 
 function App() {
   const [tick, setTick] = useState(0);
@@ -39,7 +41,7 @@ function App() {
       >
         Force Re-render ({tick})
       </button>
-      <SentinelProvider>
+      <SentinelProvider store={mockStore} sagaMonitor={mockSagaMonitor}>
         <div className="flex gap-4 flex-nowrap justify-start">
           {products.map((product) => (
             <ProductCard key={product.id} p={product} tick={tick} />
