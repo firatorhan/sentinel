@@ -21,7 +21,7 @@ export const Sentinel = ({
   componentProps,
 }: SentinelProps) => {
   const id = useId();
-  const { activeId, registerHover, unregisterHover, openDialog } =
+  const { activeId, isActive, showOutlines, highlightName, registerHover, unregisterHover, openDialog } =
     useSentinelInteraction();
 
   const propHistoryRef = useRef<Record<string, any>[]>([]);
@@ -35,19 +35,34 @@ export const Sentinel = ({
     propHistoryRef.current = [safeProps, ...propHistoryRef.current].slice(0, 6);
   }
 
-  const isDirectlyActive = activeId === id;
+  const isDirectlyActive = isActive && activeId === id;
+  const isNameHighlighted =
+    isActive &&
+    !!highlightName &&
+    !!componentName &&
+    componentName.toLowerCase().includes(highlightName.toLowerCase());
+
+  const getBorder = () => {
+    if (isNameHighlighted) return "2px dashed rgba(245, 158, 11, 0.8)";
+    if (isDirectlyActive) return "2px dashed rgba(99, 102, 241, 0.55)";
+    if (isActive && showOutlines) return "2px dashed rgba(99, 102, 241, 0.22)";
+    return "2px solid transparent";
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    if (!isActive) return;
     e.stopPropagation();
     registerHover(id, e.currentTarget.getBoundingClientRect());
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
+    if (!isActive) return;
     e.stopPropagation();
     unregisterHover(id);
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (!isActive) return;
     e.stopPropagation();
     openDialog(
       id,
@@ -74,9 +89,7 @@ export const Sentinel = ({
         className="w-full h-full p-0.5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
         style={{
           zIndex: isDirectlyActive ? 1000 : "auto",
-          border: isDirectlyActive
-            ? "2px dashed rgba(99, 102, 241, 0.55)"
-            : "2px solid transparent",
+          border: getBorder(),
           borderRadius: "inherit",
         }}
       >

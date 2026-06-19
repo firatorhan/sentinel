@@ -1,6 +1,6 @@
 {
   "name": "@sentinel-core/sentinel",
-  "version": "1.0.15",
+  "version": "1.0.18",
   "description": "Runtime intelligence for your UI.",
   "author": "firatorhan",
   "private": false,
