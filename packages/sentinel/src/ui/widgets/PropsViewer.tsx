@@ -1,84 +1,5 @@
 import React, { useState } from "react";
-
-const TRUNCATE_AT = 120;
-
-const StringValue = ({ value }: { value: string }) => {
-  const [expanded, setExpanded] = useState(false);
-
-  if (value.length <= TRUNCATE_AT) {
-    return <span className="text-emerald-400">"{value}"</span>;
-  }
-
-  return (
-    <span>
-      <span className="text-emerald-400 break-all">
-        "{expanded ? value : `${value.slice(0, TRUNCATE_AT)}...`}"
-      </span>
-      <button
-        className="ml-2 text-xs text-sky-400 underline cursor-pointer hover:text-sky-300"
-        onClick={() => setExpanded((e) => !e)}
-      >
-        {expanded ? "collapse" : `+${value.length - TRUNCATE_AT} more chars`}
-      </button>
-    </span>
-  );
-};
-
-const JsonNode = ({ value, depth = 0 }: { value: unknown; depth?: number }) => {
-  if (value === null) {
-    return <span className="text-muted-foreground">null</span>;
-  }
-  if (typeof value === "boolean") {
-    return <span className="text-orange-400">{String(value)}</span>;
-  }
-  if (typeof value === "number") {
-    return <span className="text-orange-400">{value}</span>;
-  }
-  if (typeof value === "string") {
-    return <StringValue value={value} />;
-  }
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) return <span>{"[]"}</span>;
-    return (
-      <span>
-        {"["}
-        {value.map((item, i) => (
-          <div key={i} style={{ paddingLeft: 16 }}>
-            <JsonNode value={item} depth={depth + 1} />
-            {i < value.length - 1 && (
-              <span className="text-muted-foreground">,</span>
-            )}
-          </div>
-        ))}
-        {"]"}
-      </span>
-    );
-  }
-
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    if (entries.length === 0) return <span>{"{}"}</span>;
-    return (
-      <span>
-        {"{"}
-        {entries.map(([key, val], i) => (
-          <div key={key} style={{ paddingLeft: 16 }}>
-            <span className="text-sky-400">"{key}"</span>
-            <span className="text-muted-foreground">: </span>
-            <JsonNode value={val} depth={depth + 1} />
-            {i < entries.length - 1 && (
-              <span className="text-muted-foreground">,</span>
-            )}
-          </div>
-        ))}
-        {"}"}
-      </span>
-    );
-  }
-
-  return <span>{String(value)}</span>;
-};
+import { JsonNode } from "./JsonNode";
 
 export const PropsViewer = ({
   data,
@@ -104,7 +25,7 @@ export const PropsViewer = ({
 
   return (
     <div className="space-y-2">
-      <div className="relative bg-primary text-primary-foreground p-4 rounded-md font-mono text-sm leading-6 overflow-x-hidden">
+      <div className="relative bg-primary text-primary-foreground p-4! rounded-md font-mono text-sm leading-6 overflow-x-hidden">
         <button
           onClick={handleCopy}
           className="absolute top-2 right-2 text-xs text-muted-foreground hover:text-primary-foreground transition-colors"

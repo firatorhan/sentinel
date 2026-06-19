@@ -19,6 +19,11 @@ type DialogMeta = {
   componentProps?: Record<string, any>;
 };
 
+export type ReduxStore = {
+  getState: () => unknown;
+  subscribe: (listener: () => void) => () => void;
+};
+
 type SentinelInteractionContextType = {
   activeId: string | null;
   activeRect: DOMRect | null;
@@ -28,6 +33,7 @@ type SentinelInteractionContextType = {
   setShowOutlines: (value: boolean) => void;
   highlightName: string;
   setHighlightName: (value: string) => void;
+  reduxStore: ReduxStore | undefined;
   registerHover: (id: string, rect: DOMRect) => void;
   unregisterHover: (id: string) => void;
   openDialog: (
@@ -57,8 +63,10 @@ const SentinelDialogContext = createContext<
 
 export const SentinelProvider = ({
   children,
+  store: reduxStore,
 }: {
   children: React.ReactNode;
+  store?: ReduxStore;
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
@@ -124,8 +132,8 @@ export const SentinelProvider = ({
   }, []);
 
   const interactionValue = useMemo(
-    () => ({ activeId, activeRect, isActive, setIsActive, showOutlines, setShowOutlines, highlightName, setHighlightName, registerHover, unregisterHover, openDialog }),
-    [activeId, activeRect, isActive, showOutlines, highlightName, registerHover, unregisterHover, openDialog],
+    () => ({ activeId, activeRect, isActive, setIsActive, showOutlines, setShowOutlines, highlightName, setHighlightName, reduxStore, registerHover, unregisterHover, openDialog }),
+    [activeId, activeRect, isActive, showOutlines, highlightName, reduxStore, registerHover, unregisterHover, openDialog],
   );
 
   const dialogValue = useMemo(
@@ -155,6 +163,7 @@ const noopInteraction: SentinelInteractionContextType = {
   setShowOutlines: () => {},
   highlightName: "",
   setHighlightName: () => {},
+  reduxStore: undefined,
   registerHover: () => {},
   unregisterHover: () => {},
   openDialog: () => {},
