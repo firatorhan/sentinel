@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Testing
+playground-webpack/src/mockSaga.js
+mockSaga.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

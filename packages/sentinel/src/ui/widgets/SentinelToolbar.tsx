@@ -9,8 +9,10 @@ import { Input } from "../components/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/Tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/Dialog";
 import { JsonNode } from "./JsonNode";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/Accordion";
 import { useSentinelInteraction } from "../../react";
 import { type ReduxStore } from "../../react/provider";
+import { type SentinelSagaMonitor, type EffectRecord } from "../../saga/createSentinelSagaMonitor";
 import { cn } from "../../utils/cn";
 
 const filterState = (value: unknown, query: string): unknown => {
@@ -118,7 +120,154 @@ const ReduxTab = ({ store }: { store: ReduxStore | undefined }) => {
   );
 };
 
-export const SentinelToolbar = () => {
+const STATUS_ICON: Record<EffectRecord["status"], string> = {
+  pending: "⏳",
+  resolved: "✓",
+  rejected: "✗",
+  cancelled: "⊘",
+};
+
+const STATUS_COLOR: Record<EffectRecord["status"], string> = {
+  pending: "text-amber-400",
+  resolved: "text-emerald-400",
+  rejected: "text-red-400",
+  cancelled: "text-muted-foreground",
+};
+
+const EffectList = ({ effects }: { effects: EffectRecord[] }) => {
+  if (effects.length === 0) {
+    return (
+      <div className="py-4 text-center text-xs text-muted-foreground">
+        No calls captured yet.
+      </div>
+    );
+  }
+
+  return (
+    <Accordion type="multiple" className="w-full font-mono text-xs">
+      {effects.map((effect) => (
+        <AccordionItem key={effect.id} value={String(effect.id)}>
+          <AccordionTrigger
+            className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal"
+          >
+            <span className={cn("shrink-0 w-4 text-center", STATUS_COLOR[effect.status])}>
+              {STATUS_ICON[effect.status]}
+            </span>
+            <span className="flex-1 truncate text-left text-foreground mx-2">{effect.fnName}</span>
+            {effect.duration !== undefined && (
+              <span className="shrink-0 text-muted-foreground mr-1">{effect.duration}ms</span>
+            )}
+          </AccordionTrigger>
+
+          <AccordionContent className="pb-2! pt-0 px-2">
+            <div className="space-y-1.5">
+              {effect.args.length > 0 && (
+                <div className="bg-muted p-2! rounded overflow-x-hidden">
+                  <div className="text-muted-foreground mb-1!">args</div>
+                  <JsonNode value={effect.args} collapseFromDepth={1} />
+                </div>
+              )}
+              {effect.result !== undefined && (
+                <div className="bg-primary text-primary-foreground p-2! rounded overflow-x-hidden">
+                  <div className="text-muted-foreground mb-1">result</div>
+                  <JsonNode value={effect.result} collapseFromDepth={1} />
+                </div>
+              )}
+              {effect.error !== undefined && (
+                <div className="bg-destructive/10 text-destructive p-2 rounded overflow-x-hidden">
+                  <div className="mb-1! font-medium">error</div>
+                  <JsonNode
+                    value={effect.error instanceof Error ? effect.error.message : effect.error}
+                    collapseFromDepth={1}
+                  />
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+};
+
+const SagaTab = ({ monitor }: { monitor: SentinelSagaMonitor | undefined }) => {
+  const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
+  const [search, setSearch] = React.useState("");
+  const [expanded, setExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!monitor) return;
+    setEffects(monitor._getEffects());
+    return monitor._subscribe(() => setEffects(monitor._getEffects()));
+  }, [monitor]);
+
+  if (!monitor) {
+    return (
+      <div className="py-6 text-center text-sm text-muted-foreground">
+        No saga monitor connected.
+        <span className="block mt-1 text-xs font-mono">
+          {"sagaMonitor={sentinelMonitor}"}
+        </span>
+      </div>
+    );
+  }
+
+  const filtered = search
+    ? effects.filter((e) => e.fnName.toLowerCase().includes(search.toLowerCase()))
+    : effects;
+
+  return (
+    <>
+      <div className="py-3 space-y-2">
+        <div className="flex items-center gap-1.5">
+          <Input
+            placeholder="Search calls…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-7 text-xs"
+          />
+          {effects.length > 0 && (
+            <button
+              onClick={() => monitor._clear()}
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={() => setExpanded(true)}
+            title="Expand"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Maximize2 size={14} />
+          </button>
+        </div>
+        <div className="max-h-60 overflow-y-auto">
+          <EffectList effects={filtered} />
+        </div>
+      </div>
+
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent className="flex flex-col overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Saga Calls</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Search calls…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 text-sm shrink-0"
+          />
+          <div className="overflow-y-auto min-h-0 flex-1">
+            <EffectList effects={filtered} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+export const SentinelToolbar = ({ sagaMonitor }: { sagaMonitor?: SentinelSagaMonitor }) => {
   const {
     isActive, setIsActive,
     showOutlines, setShowOutlines,
@@ -155,9 +304,10 @@ export const SentinelToolbar = () => {
             <Separator />
 
             <Tabs defaultValue="controls">
-              <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-9 gap-4">
+              <TabsList className="grid w-full grid-cols-3 mx-0 rounded-none border-b bg-transparent h-9 gap-2">
                 <TabsTrigger value="controls" className="text-xs">Controls</TabsTrigger>
                 <TabsTrigger value="redux" className="text-xs">Redux</TabsTrigger>
+                <TabsTrigger value="saga" className="text-xs">Saga</TabsTrigger>
               </TabsList>
 
               <TabsContent value="controls" className="mt-0">
@@ -209,6 +359,10 @@ export const SentinelToolbar = () => {
 
               <TabsContent value="redux" className="mt-0">
                 <ReduxTab store={reduxStore} />
+              </TabsContent>
+
+              <TabsContent value="saga" className="mt-0">
+                <SagaTab monitor={sagaMonitor} />
               </TabsContent>
             </Tabs>
           </PopoverContent>

@@ -9,6 +9,7 @@ import React, {
 import { SentinelDialog } from "../ui/widgets/SentinelDialog";
 import { SentinelToolbar } from "../ui/widgets/SentinelToolbar";
 import { Spotlight } from "../ui/widgets/Spotlight";
+import { type SentinelSagaMonitor } from "../saga/createSentinelSagaMonitor";
 
 type DialogMeta = {
   componentName?: string;
@@ -64,9 +65,11 @@ const SentinelDialogContext = createContext<
 export const SentinelProvider = ({
   children,
   store: reduxStore,
+  sagaMonitor,
 }: {
   children: React.ReactNode;
   store?: ReduxStore;
+  sagaMonitor?: SentinelSagaMonitor;
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
@@ -148,7 +151,7 @@ export const SentinelProvider = ({
         <Spotlight active={isActive}>
           <SentinelDialog />
         </Spotlight>
-        <SentinelToolbar />
+        <SentinelToolbar sagaMonitor={sagaMonitor} />
       </SentinelDialogContext.Provider>
     </SentinelInteractionContext.Provider>
   );
