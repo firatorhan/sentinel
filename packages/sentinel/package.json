@@ -39,15 +39,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@huin-core/react-checkbox": "^1.0.6",
     "@huin-core/react-dialog": "^1.0.6",
     "@huin-core/react-id": "^1.0.6",
     "@huin-core/react-label": "^1.0.7",
+    "@huin-core/react-popover": "^1.0.6",
     "@huin-core/react-portal": "^1.0.6",
     "@huin-core/react-primitive": "^1.0.6",
+    "@huin-core/react-radio-group": "^1.0.6",
+    "@huin-core/react-scroll-area": "^1.0.6",
+    "@huin-core/react-select": "^1.0.7",
+    "@huin-core/react-separator": "^1.0.6",
     "@huin-core/react-slot": "^1.0.6",
+    "@huin-core/react-switch": "^1.0.6",
     "@huin-core/react-tabs": "^1.0.6",
+    "@huin-core/react-toggle-group": "^1.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^1.21.0",
     "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
