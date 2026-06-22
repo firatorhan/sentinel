@@ -16,6 +16,7 @@ export const Spotlight = ({ children, active = true }: SpotlightProps) => {
   return (
     <>
       <Portal>
+        <div className="sentinel-root">
         {activeRect && (
           <div
             className="pointer-events-none fixed inset-0 z-[999] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
@@ -35,6 +36,7 @@ export const Spotlight = ({ children, active = true }: SpotlightProps) => {
           />
         )}
         {children}
+        </div>
       </Portal>
     </>
   );

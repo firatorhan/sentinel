@@ -344,6 +344,7 @@ export const SentinelToolbar = ({
 
   return (
     <Portal>
+      <div className="sentinel-root">
       <div className="fixed bottom-4 right-4 z-[9999]">
         <Popover>
           <PopoverTrigger
@@ -434,6 +435,7 @@ export const SentinelToolbar = ({
             </Tabs>
           </PopoverContent>
         </Popover>
+      </div>
       </div>
     </Portal>
   );

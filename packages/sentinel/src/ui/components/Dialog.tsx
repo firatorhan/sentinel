@@ -78,6 +78,7 @@ const DialogContent = React.forwardRef<
     VariantProps<typeof dialogVariants>
 >(({ className, variant, children, ...props }, ref) => (
   <DialogPortal>
+    <div className="sentinel-root">
     <DialogOverlay />
     <DialogPrimitive.DialogContent
       ref={ref}
@@ -105,6 +106,7 @@ const DialogContent = React.forwardRef<
         <span className="sr-only">Close</span>
       </DialogPrimitive.DialogClose>
     </DialogPrimitive.DialogContent>
+    </div>
   </DialogPortal>
 ));
 DialogContent.displayName = DialogPrimitive.DialogContent.displayName;
