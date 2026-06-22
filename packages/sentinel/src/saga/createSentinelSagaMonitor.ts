@@ -21,7 +21,46 @@ export type SentinelSagaMonitor = {
   effectCancelled(effectId: number): void;
   _subscribe(listener: () => void): () => void;
   _getEffects(): EffectRecord[];
+  _getSerializableEffects(): EffectRecord[];
   _clear(): void;
+};
+
+const safeClone = (val: unknown): unknown => {
+  if (val === undefined || val === null) return val;
+  try {
+    return JSON.parse(JSON.stringify(val));
+  } catch {
+    return null;
+  }
+};
+
+const safeResult = (result: unknown): unknown => {
+  if (result === undefined || result === null) return result;
+  if (
+    typeof result === "object" &&
+    "data" in (result as Record<string, unknown>) &&
+    "status" in (result as Record<string, unknown>)
+  ) {
+    // Axios-like response — keep data + safe config fields (skip functions)
+    const r = result as Record<string, unknown>;
+    const cfg = r.config as Record<string, unknown> | undefined;
+    return safeClone({
+      status: r.status,
+      statusText: r.statusText,
+      data: r.data,
+      config: cfg
+        ? {
+            url: cfg.url,
+            method: cfg.method,
+            baseURL: cfg.baseURL,
+            headers: cfg.headers,
+            data: cfg.data,
+            timeout: cfg.timeout,
+          }
+        : undefined,
+    });
+  }
+  return safeClone(result);
 };
 
 export const createSentinelSagaMonitor = (): SentinelSagaMonitor => {
@@ -109,6 +148,24 @@ export const createSentinelSagaMonitor = (): SentinelSagaMonitor => {
 
     _getEffects() {
       return Array.from(effects.values()).reverse();
+    },
+
+    _getSerializableEffects() {
+      return Array.from(effects.values())
+        .reverse()
+        .map((e) => ({
+          id: e.id,
+          parentId: e.parentId,
+          fnName: e.fnName,
+          status: e.status,
+          startedAt: e.startedAt,
+          duration: e.duration,
+          args: (safeClone(e.args) ?? []) as unknown[],
+          result: safeResult(e.result),
+          error: e.error !== undefined
+            ? (safeClone(e.error instanceof Error ? e.error.message : e.error) ?? String(e.error))
+            : undefined,
+        }));
     },
 
     _clear() {
