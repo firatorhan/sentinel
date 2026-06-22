@@ -15,6 +15,20 @@ import { type ReduxStore } from "../../react/provider";
 import { type SentinelSagaMonitor, type EffectRecord } from "../../saga/createSentinelSagaMonitor";
 import { cn } from "../../utils/cn";
 
+const getPreview = (value: unknown): string => {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return `"${value.length > 20 ? value.slice(0, 20) + "…" : value}"`;
+  if (Array.isArray(value)) return `[${value.length}]`;
+  if (typeof value === "object") {
+    const n = Object.keys(value as object).length;
+    return `{ ${n} key${n !== 1 ? "s" : ""} }`;
+  }
+  return String(value);
+};
+
 const filterState = (value: unknown, query: string): unknown => {
   if (!query) return value;
   const q = query.toLowerCase();
@@ -47,13 +61,17 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
   const [expanded, setExpanded] = React.useState(false);
 
   const filtered = filterState(state, search);
+  const isPlainObject = state !== null && typeof state === "object" && !Array.isArray(state);
+  const entries = isPlainObject ? Object.entries(state as Record<string, unknown>) : [];
 
-  const JsonTree = ({ collapseDepth }: { collapseDepth: number }) =>
-    filtered !== undefined ? (
-      <JsonNode value={filtered} collapseFromDepth={collapseDepth} />
+  const JsonTree = ({ value, collapseDepth }: { value: unknown; collapseDepth: number }) => {
+    const f = filterState(value, search);
+    return f !== undefined ? (
+      <JsonNode value={f} collapseFromDepth={collapseDepth} />
     ) : (
       <span className="text-muted-foreground italic">No results for "{search}"</span>
     );
+  };
 
   return (
     <>
@@ -73,10 +91,35 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
             <Maximize2 size={14} />
           </button>
         </div>
+
         <div className="max-h-60 overflow-y-auto">
-          <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-            <JsonTree collapseDepth={1} />
-          </div>
+          {search || !isPlainObject || entries.length === 0 ? (
+            <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+              {filtered !== undefined ? (
+                <JsonNode value={filtered} collapseFromDepth={1} />
+              ) : (
+                <span className="text-muted-foreground italic">No results for "{search}"</span>
+              )}
+            </div>
+          ) : (
+            <Accordion type="multiple" className="w-full font-mono text-xs">
+              {entries.map(([key, value]) => (
+                <AccordionItem key={key} value={key}>
+                  <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+                    <span className="flex-1 text-left truncate text-foreground">{key}</span>
+                    <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
+                      {getPreview(value)}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-2! pt-0 px-1">
+                    <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                      <JsonTree value={value} collapseDepth={1} />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </div>
       </div>
 
@@ -92,9 +135,33 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
             className="h-8 text-sm shrink-0"
           />
           <div className="overflow-y-auto min-h-0 flex-1">
-            <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-              <JsonTree collapseDepth={2} />
-            </div>
+            {search || !isPlainObject || entries.length === 0 ? (
+              <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                {filtered !== undefined ? (
+                  <JsonNode value={filtered} collapseFromDepth={2} />
+                ) : (
+                  <span className="text-muted-foreground italic">No results for "{search}"</span>
+                )}
+              </div>
+            ) : (
+              <Accordion type="multiple" className="w-full font-mono text-xs">
+                {entries.map(([key, value]) => (
+                  <AccordionItem key={key} value={key}>
+                    <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+                      <span className="flex-1 text-left truncate text-foreground">{key}</span>
+                      <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
+                        {getPreview(value)}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2! pt-0 px-1">
+                      <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                        <JsonTree value={value} collapseDepth={2} />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            )}
           </div>
         </DialogContent>
       </Dialog>
