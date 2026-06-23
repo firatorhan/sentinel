@@ -34,7 +34,8 @@ function App() {
     },
   ];
   return (
-    <section className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background">
+    <section className="sentinel-root">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background">
       <button
         onClick={() => setTick((t) => t + 1)}
         className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
@@ -48,6 +49,7 @@ function App() {
           ))}
         </div>
       </SentinelProvider>
+      </div>
     </section>
   );
 }

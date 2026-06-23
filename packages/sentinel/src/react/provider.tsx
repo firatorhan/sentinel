@@ -9,7 +9,7 @@ import React, {
 import { SentinelDialog } from "../ui/widgets/SentinelDialog";
 import { SentinelToolbar } from "../ui/widgets/SentinelToolbar";
 import { Spotlight } from "../ui/widgets/Spotlight";
-import { type SentinelSagaMonitor } from "../saga/createSentinelSagaMonitor";
+import { type SentinelSagaMonitor, type EffectRecord } from "../saga/createSentinelSagaMonitor";
 
 type DialogMeta = {
   componentName?: string;
@@ -66,10 +66,14 @@ export const SentinelProvider = ({
   children,
   store: reduxStore,
   sagaMonitor,
+  serverState,
+  serverSagaEffects,
 }: {
   children: React.ReactNode;
   store?: ReduxStore;
   sagaMonitor?: SentinelSagaMonitor;
+  serverState?: unknown;
+  serverSagaEffects?: EffectRecord[];
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
@@ -101,6 +105,15 @@ export const SentinelProvider = ({
   const registerHover = useCallback((id: string, rect: DOMRect) => {
     setActiveId(id);
     setActiveRect(rect);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setActiveId(null);
+      setActiveRect(null);
+    };
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
   }, []);
 
   const unregisterHover = useCallback((id: string) => {
@@ -151,7 +164,7 @@ export const SentinelProvider = ({
         <Spotlight active={isActive}>
           <SentinelDialog />
         </Spotlight>
-        <SentinelToolbar sagaMonitor={sagaMonitor} />
+        <SentinelToolbar sagaMonitor={sagaMonitor} serverState={serverState} serverSagaEffects={serverSagaEffects} />
       </SentinelDialogContext.Provider>
     </SentinelInteractionContext.Provider>
   );

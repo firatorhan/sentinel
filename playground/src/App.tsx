@@ -31,14 +31,16 @@ const products = [
 
 function App() {
   return (
-    <section className="min-h-screen flex items-center justify-center bg-background">
-      <SentinelProvider>
-        <div className="flex gap-4 flex-nowrap justify-start">
-          {products.map((product) => (
-            <ProductCard key={product.id} p={product} />
-          ))}
-        </div>
-      </SentinelProvider>
+    <section className="sentinel-root">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background">
+        <SentinelProvider>
+          <div className="flex gap-4 flex-nowrap justify-start">
+            {products.map((product) => (
+              <ProductCard key={product.id} p={product} />
+            ))}
+          </div>
+        </SentinelProvider>
+      </div>
     </section>
   );
 }

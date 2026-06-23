@@ -5,7 +5,7 @@ import { cn } from "../../utils/cn";
 import { Button } from "./Button";
 
 const dialogVariants = cva(
-  "fixed z-[999] gap-4 bg-background !p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "fixed z-[10000] gap-4 bg-background !p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
     variants: {
       variant: {
@@ -60,7 +60,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.DialogOverlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-[999] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-[10000] bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -78,6 +78,7 @@ const DialogContent = React.forwardRef<
     VariantProps<typeof dialogVariants>
 >(({ className, variant, children, ...props }, ref) => (
   <DialogPortal>
+    <div className="sentinel-root">
     <DialogOverlay />
     <DialogPrimitive.DialogContent
       ref={ref}
@@ -105,6 +106,7 @@ const DialogContent = React.forwardRef<
         <span className="sr-only">Close</span>
       </DialogPrimitive.DialogClose>
     </DialogPrimitive.DialogContent>
+    </div>
   </DialogPortal>
 ));
 DialogContent.displayName = DialogPrimitive.DialogContent.displayName;

@@ -7,34 +7,87 @@ type SpotlightProps = {
   active?: boolean;
 };
 
+const DARK = "rgba(10, 10, 12, 0.72)";
+const BLUR = "blur(8px) saturate(140%) contrast(105%)";
+
 export const Spotlight = ({ children, active = true }: SpotlightProps) => {
   if (!active) return <>{children}</>;
   const { activeRect } = useSentinelInteraction();
-  const centerX = activeRect ? activeRect.left + activeRect.width / 2 : 0;
-  const centerY = activeRect ? activeRect.top + activeRect.height / 2 : 0;
 
   return (
     <>
       <Portal>
-        {activeRect && (
-          <div
-            className="pointer-events-none fixed inset-0 z-[999] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-            style={{
-              background: `
-                radial-gradient(
-                  circle at ${centerX}px ${centerY}px,
-                  rgba(255, 255, 255, 0.04) 0%,
-                  rgba(255,255,255,0.01) 25%,
-                  rgba(15, 15, 18, 0.35) 60%,
-                  rgba(10, 10, 12, 0.75) 100%
-                )
-              `,
-              backdropFilter: "blur(8px) saturate(140%) contrast(105%)",
-              WebkitBackdropFilter: "blur(8px) saturate(140%) contrast(105%)",
-            }}
-          />
-        )}
-        {children}
+        <div className="sentinel-root">
+          {activeRect && (
+            <>
+              {/* Top */}
+              <div
+                className="pointer-events-none fixed z-[999]"
+                style={{
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: activeRect.top,
+                  background: DARK,
+                  backdropFilter: BLUR,
+                  WebkitBackdropFilter: BLUR,
+                }}
+              />
+              {/* Bottom */}
+              <div
+                className="pointer-events-none fixed z-[999]"
+                style={{
+                  top: activeRect.bottom,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: DARK,
+                  backdropFilter: BLUR,
+                  WebkitBackdropFilter: BLUR,
+                }}
+              />
+              {/* Left */}
+              <div
+                className="pointer-events-none fixed z-[999]"
+                style={{
+                  top: activeRect.top,
+                  left: 0,
+                  width: activeRect.left,
+                  height: activeRect.height,
+                  background: DARK,
+                  backdropFilter: BLUR,
+                  WebkitBackdropFilter: BLUR,
+                }}
+              />
+              {/* Right */}
+              <div
+                className="pointer-events-none fixed z-[999]"
+                style={{
+                  top: activeRect.top,
+                  left: activeRect.right,
+                  right: 0,
+                  height: activeRect.height,
+                  background: DARK,
+                  backdropFilter: BLUR,
+                  WebkitBackdropFilter: BLUR,
+                }}
+              />
+              {/* Border around active component */}
+              <div
+                className="pointer-events-none fixed z-[1000]"
+                style={{
+                  top: activeRect.top,
+                  left: activeRect.left,
+                  width: activeRect.width,
+                  height: activeRect.height,
+                  border: "2px dashed rgba(99, 102, 241, 0.7)",
+                  borderRadius: 4,
+                }}
+              />
+            </>
+          )}
+          {children}
+        </div>
       </Portal>
     </>
   );

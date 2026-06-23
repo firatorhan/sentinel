@@ -15,6 +15,20 @@ import { type ReduxStore } from "../../react/provider";
 import { type SentinelSagaMonitor, type EffectRecord } from "../../saga/createSentinelSagaMonitor";
 import { cn } from "../../utils/cn";
 
+const getPreview = (value: unknown): string => {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return `"${value.length > 20 ? value.slice(0, 20) + "…" : value}"`;
+  if (Array.isArray(value)) return `[${value.length}]`;
+  if (typeof value === "object") {
+    const n = Object.keys(value as object).length;
+    return `{ ${n} key${n !== 1 ? "s" : ""} }`;
+  }
+  return String(value);
+};
+
 const filterState = (value: unknown, query: string): unknown => {
   if (!query) return value;
   const q = query.toLowerCase();
@@ -42,40 +56,26 @@ const filterState = (value: unknown, query: string): unknown => {
   return Object.keys(result).length > 0 ? result : undefined;
 };
 
-const ReduxTab = ({ store }: { store: ReduxStore | undefined }) => {
-  const [state, setState] = React.useState<unknown>(store?.getState());
+const ReduxStatePane = ({ state }: { state: unknown }) => {
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!store) return;
-    setState(store.getState());
-    return store.subscribe(() => setState(store.getState()));
-  }, [store]);
-
-  if (!store) {
-    return (
-      <div className="py-6 text-center text-sm text-muted-foreground">
-        No store connected.
-        <span className="block mt-1 text-xs font-mono">
-          {"<SentinelProvider store={store}>"}
-        </span>
-      </div>
-    );
-  }
-
   const filtered = filterState(state, search);
+  const isPlainObject = state !== null && typeof state === "object" && !Array.isArray(state);
+  const entries = isPlainObject ? Object.entries(state as Record<string, unknown>) : [];
 
-  const JsonTree = ({ collapseDepth }: { collapseDepth: number }) =>
-    filtered !== undefined ? (
-      <JsonNode value={filtered} collapseFromDepth={collapseDepth} />
+  const JsonTree = ({ value, collapseDepth }: { value: unknown; collapseDepth: number }) => {
+    const f = filterState(value, search);
+    return f !== undefined ? (
+      <JsonNode value={f} collapseFromDepth={collapseDepth} />
     ) : (
       <span className="text-muted-foreground italic">No results for "{search}"</span>
     );
+  };
 
   return (
     <>
-      <div className="py-3 space-y-2">
+      <div className="py-3! space-y-2!">
         <div className="flex items-center gap-1.5">
           <Input
             placeholder="Search state…"
@@ -91,10 +91,35 @@ const ReduxTab = ({ store }: { store: ReduxStore | undefined }) => {
             <Maximize2 size={14} />
           </button>
         </div>
+
         <div className="max-h-60 overflow-y-auto">
-          <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-            <JsonTree collapseDepth={1} />
-          </div>
+          {search || !isPlainObject || entries.length === 0 ? (
+            <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+              {filtered !== undefined ? (
+                <JsonNode value={filtered} collapseFromDepth={1} />
+              ) : (
+                <span className="text-muted-foreground italic">No results for "{search}"</span>
+              )}
+            </div>
+          ) : (
+            <Accordion type="multiple" className="w-full font-mono text-xs">
+              {entries.map(([key, value]) => (
+                <AccordionItem key={key} value={key}>
+                  <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+                    <span className="flex-1 text-left truncate text-foreground">{key}</span>
+                    <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
+                      {getPreview(value)}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-2! pt-0 px-1">
+                    <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                      <JsonTree value={value} collapseDepth={1} />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </div>
       </div>
 
@@ -110,13 +135,84 @@ const ReduxTab = ({ store }: { store: ReduxStore | undefined }) => {
             className="h-8 text-sm shrink-0"
           />
           <div className="overflow-y-auto min-h-0 flex-1">
-            <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-              <JsonTree collapseDepth={2} />
-            </div>
+            {search || !isPlainObject || entries.length === 0 ? (
+              <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                {filtered !== undefined ? (
+                  <JsonNode value={filtered} collapseFromDepth={2} />
+                ) : (
+                  <span className="text-muted-foreground italic">No results for "{search}"</span>
+                )}
+              </div>
+            ) : (
+              <Accordion type="multiple" className="w-full font-mono text-xs">
+                {entries.map(([key, value]) => (
+                  <AccordionItem key={key} value={key}>
+                    <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+                      <span className="flex-1 text-left truncate text-foreground">{key}</span>
+                      <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
+                        {getPreview(value)}
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2! pt-0 px-1">
+                      <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                        <JsonTree value={value} collapseDepth={2} />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            )}
           </div>
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+const ReduxTab = ({ store, serverState }: { store: ReduxStore | undefined; serverState?: unknown }) => {
+  const [clientState, setClientState] = React.useState<unknown>(store?.getState());
+
+  React.useEffect(() => {
+    if (!store) return;
+    setClientState(store.getState());
+    return store.subscribe(() => setClientState(store.getState()));
+  }, [store]);
+
+  const hasServer = serverState != null;
+
+  if (!hasServer) {
+    if (!store) {
+      return (
+        <div className="py-6 text-center text-sm text-muted-foreground">
+          No store connected.
+          <span className="block mt-1 text-xs font-mono">
+            {"<SentinelProvider store={store}>"}
+          </span>
+        </div>
+      );
+    }
+    return <ReduxStatePane state={clientState} />;
+  }
+
+  return (
+    <Tabs defaultValue="server">
+      <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
+        <TabsTrigger value="client" className="text-xs">Client</TabsTrigger>
+        <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
+      </TabsList>
+      <TabsContent value="client" className="mt-0">
+        {store ? (
+          <ReduxStatePane state={clientState} />
+        ) : (
+          <div className="py-4 text-center text-xs text-muted-foreground">
+            No client store connected.
+          </div>
+        )}
+      </TabsContent>
+      <TabsContent value="server" className="mt-0">
+        <ReduxStatePane state={serverState} />
+      </TabsContent>
+    </Tabs>
   );
 };
 
@@ -161,7 +257,7 @@ const EffectList = ({ effects }: { effects: EffectRecord[] }) => {
 
           <AccordionContent className="pb-2! pt-0 px-2">
             <div className="space-y-1.5">
-              {effect.args.length > 0 && (
+              {(effect.args?.length ?? 0) > 0 && (
                 <div className="bg-muted p-2! rounded overflow-x-hidden">
                   <div className="text-muted-foreground mb-1!">args</div>
                   <JsonNode value={effect.args} collapseFromDepth={1} />
@@ -190,27 +286,10 @@ const EffectList = ({ effects }: { effects: EffectRecord[] }) => {
   );
 };
 
-const SagaTab = ({ monitor }: { monitor: SentinelSagaMonitor | undefined }) => {
-  const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
+const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; onClear?: () => void }) => {
+  const effects = rawEffects ?? [];
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!monitor) return;
-    setEffects(monitor._getEffects());
-    return monitor._subscribe(() => setEffects(monitor._getEffects()));
-  }, [monitor]);
-
-  if (!monitor) {
-    return (
-      <div className="py-6 text-center text-sm text-muted-foreground">
-        No saga monitor connected.
-        <span className="block mt-1 text-xs font-mono">
-          {"sagaMonitor={sentinelMonitor}"}
-        </span>
-      </div>
-    );
-  }
 
   const filtered = search
     ? effects.filter((e) => e.fnName.toLowerCase().includes(search.toLowerCase()))
@@ -218,7 +297,7 @@ const SagaTab = ({ monitor }: { monitor: SentinelSagaMonitor | undefined }) => {
 
   return (
     <>
-      <div className="py-3 space-y-2">
+      <div className="py-3! space-y-2!">
         <div className="flex items-center gap-1.5">
           <Input
             placeholder="Search calls…"
@@ -226,9 +305,9 @@ const SagaTab = ({ monitor }: { monitor: SentinelSagaMonitor | undefined }) => {
             onChange={(e) => setSearch(e.target.value)}
             className="h-7 text-xs"
           />
-          {effects.length > 0 && (
+          {onClear && effects.length > 0 && (
             <button
-              onClick={() => monitor._clear()}
+              onClick={onClear}
               className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Clear
@@ -267,7 +346,62 @@ const SagaTab = ({ monitor }: { monitor: SentinelSagaMonitor | undefined }) => {
   );
 };
 
-export const SentinelToolbar = ({ sagaMonitor }: { sagaMonitor?: SentinelSagaMonitor }) => {
+const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
+  const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
+
+  React.useEffect(() => {
+    if (!monitor) return;
+    setEffects(monitor._getEffects());
+    return monitor._subscribe(() => setEffects(monitor._getEffects()));
+  }, [monitor]);
+
+  const hasServer = serverEffects != null;
+
+  if (!hasServer) {
+    if (!monitor) {
+      return (
+        <div className="py-6 text-center text-sm text-muted-foreground">
+          No saga monitor connected.
+          <span className="block mt-1 text-xs font-mono">
+            {"sagaMonitor={sentinelMonitor}"}
+          </span>
+        </div>
+      );
+    }
+    return <SagaPane effects={effects} onClear={() => monitor._clear()} />;
+  }
+
+  return (
+    <Tabs defaultValue="server">
+      <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
+        <TabsTrigger value="client" className="text-xs">Client</TabsTrigger>
+        <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
+      </TabsList>
+      <TabsContent value="client" className="mt-0">
+        {monitor ? (
+          <SagaPane effects={effects} onClear={() => monitor._clear()} />
+        ) : (
+          <div className="py-4 text-center text-xs text-muted-foreground">
+            No client monitor connected.
+          </div>
+        )}
+      </TabsContent>
+      <TabsContent value="server" className="mt-0">
+        <SagaPane effects={serverEffects} />
+      </TabsContent>
+    </Tabs>
+  );
+};
+
+export const SentinelToolbar = ({
+  sagaMonitor,
+  serverState,
+  serverSagaEffects,
+}: {
+  sagaMonitor?: SentinelSagaMonitor;
+  serverState?: unknown;
+  serverSagaEffects?: EffectRecord[];
+}) => {
   const {
     isActive, setIsActive,
     showOutlines, setShowOutlines,
@@ -277,6 +411,7 @@ export const SentinelToolbar = ({ sagaMonitor }: { sagaMonitor?: SentinelSagaMon
 
   return (
     <Portal>
+      <div className="sentinel-root">
       <div className="fixed bottom-4 right-4 z-[9999]">
         <Popover>
           <PopoverTrigger
@@ -339,7 +474,7 @@ export const SentinelToolbar = ({ sagaMonitor }: { sagaMonitor?: SentinelSagaMon
 
                 <Separator />
 
-                <div className="py-3! space-y-1.5">
+                <div className="py-3! space-y-1.5!">
                   <Label
                     htmlFor="sentinel-filter-input"
                     className={cn("text-xs text-muted-foreground", !isActive && "opacity-40")}
@@ -358,15 +493,16 @@ export const SentinelToolbar = ({ sagaMonitor }: { sagaMonitor?: SentinelSagaMon
               </TabsContent>
 
               <TabsContent value="redux" className="mt-0">
-                <ReduxTab store={reduxStore} />
+                <ReduxTab store={reduxStore} serverState={serverState} />
               </TabsContent>
 
               <TabsContent value="saga" className="mt-0">
-                <SagaTab monitor={sagaMonitor} />
+                <SagaTab monitor={sagaMonitor} serverEffects={serverSagaEffects} />
               </TabsContent>
             </Tabs>
           </PopoverContent>
         </Popover>
+      </div>
       </div>
     </Portal>
   );

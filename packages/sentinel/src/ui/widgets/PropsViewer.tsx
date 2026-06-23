@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { JsonNode } from "./JsonNode";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/Accordion";
 
 export const PropsViewer = ({
   data,
@@ -9,7 +10,6 @@ export const PropsViewer = ({
   history?: Record<string, any>[];
 }) => {
   const [copied, setCopied] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const handleCopy = () => {
     try {
@@ -36,30 +36,26 @@ export const PropsViewer = ({
       </div>
 
       {prevRenders.length > 0 && (
-        <div>
-          <button
-            onClick={() => setHistoryOpen((o) => !o)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {historyOpen ? "▾" : "▸"} Previous renders ({prevRenders.length})
-          </button>
-          {historyOpen && (
-            <div className="space-y-2 mt-2">
-              {prevRenders.map((snapshot, i) => (
+        <Accordion type="multiple" className="w-full">
+          {prevRenders.map((snapshot, i) => (
+            <AccordionItem key={i} value={String(i)}>
+              <AccordionTrigger
+                className="py-2 px-1 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal"
+                style={{ opacity: 1 - i * 0.12 }}
+              >
+                <span className="text-muted-foreground">-{i + 1} render</span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-2! pt-0 px-1">
                 <div
-                  key={i}
-                  className="bg-muted p-3 rounded-md font-mono text-sm leading-6 overflow-x-hidden"
-                  style={{ opacity: 1 - i * 0.15 }}
+                  className="bg-muted p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden"
+                  style={{ opacity: 1 - i * 0.12 }}
                 >
-                  <div className="text-xs text-muted-foreground mb-2">
-                    -{i + 1} render
-                  </div>
-                  <JsonNode value={snapshot} />
+                  <JsonNode value={snapshot} collapseFromDepth={1} />
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       )}
     </div>
   );
