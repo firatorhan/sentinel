@@ -4,7 +4,6 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { SentinelDialog } from "../ui/widgets/SentinelDialog";
@@ -36,7 +35,7 @@ type SentinelInteractionContextType = {
   highlightName: string;
   setHighlightName: (value: string) => void;
   reduxStore: ReduxStore | undefined;
-  registerHover: (id: string, element: Element) => void;
+  registerHover: (id: string, rect: DOMRect) => void;
   unregisterHover: (id: string) => void;
   openDialog: (
     id: string,
@@ -78,7 +77,6 @@ export const SentinelProvider = ({
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
-  const activeElementRef = useRef<Element | null>(null);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const [dialogMeta, setDialogMeta] = useState<DialogMeta>({});
   const [isActive, setIsActive] = useState(false);
@@ -104,15 +102,13 @@ export const SentinelProvider = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const registerHover = useCallback((id: string, element: Element) => {
-    activeElementRef.current = element;
+  const registerHover = useCallback((id: string, rect: DOMRect) => {
     setActiveId(id);
-    setActiveRect(element.getBoundingClientRect());
+    setActiveRect(rect);
   }, []);
 
   useEffect(() => {
     const onScroll = () => {
-      activeElementRef.current = null;
       setActiveId(null);
       setActiveRect(null);
     };
@@ -123,7 +119,6 @@ export const SentinelProvider = ({
   const unregisterHover = useCallback((id: string) => {
     setActiveId((prev) => {
       if (prev === id) {
-        activeElementRef.current = null;
         setActiveRect(null);
         return null;
       }
@@ -185,7 +180,7 @@ const noopInteraction: SentinelInteractionContextType = {
   highlightName: "",
   setHighlightName: () => {},
   reduxStore: undefined,
-  registerHover: () => { },
+  registerHover: () => {},
   unregisterHover: () => {},
   openDialog: () => {},
 };

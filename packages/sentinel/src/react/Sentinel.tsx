@@ -50,7 +50,7 @@ export const Sentinel = ({
   const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     if (!isActive) return;
     e.stopPropagation();
-    registerHover(id, e.currentTarget);
+    registerHover(id, e.currentTarget.getBoundingClientRect());
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
