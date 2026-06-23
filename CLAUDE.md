@@ -40,21 +40,32 @@ This is an npm workspace monorepo with two publishable packages and two playgrou
 
 ### Package: `@sentinel-core/sentinel`
 
-A React component library built with Vite in lib mode (ES + CJS). Exposes:
-- `SentinelProvider` — context provider that must wrap the app client-side. Renders `Spotlight` (radial gradient overlay via Portal) and `SentinelDialog` (tabbed dialog) internally. **Never render server-side** — it uses `document` via Portal.
-- `Sentinel` — wrapper component injected by the plugin. Registers hover/click handlers and tracks render count + prop history (last 6 snapshots via `propHistoryRef`).
-- `useSentinelInteraction()` — hover state context (activeId, activeRect, registerHover, unregisterHover, openDialog).
-- `useSentinelDialog()` — dialog state context (openDialogId, dialogMeta, closeDialog).
-- `useSentinel()` — merged shorthand for the two contexts above; returns noops when called outside a provider.
+A React component library built with Vite in lib mode (ES + CJS). Entry: `src/index.ts` re-exports everything from `src/react/index.ts`.
+
+**Public exports:**
+- `SentinelProvider` — context provider that must wrap the app client-side only. Accepts `store?: ReduxStore`, `sagaMonitor?: SentinelSagaMonitor`, `serverState?: unknown`, `serverSagaEffects?: EffectRecord[]`. Renders `Spotlight`, `SentinelDialog`, and `SentinelToolbar` internally via Portal. **Never render server-side.**
+- `Sentinel` — wrapper component injected by the plugin. Registers hover/click handlers and tracks render count + prop history (last 6 snapshots via `propHistoryRef`). Passes `DOMRect` (not element) to `registerHover`.
+- `createSentinelSagaMonitor()` — factory for a Redux Saga monitor object. Pass the result to `SentinelProvider sagaMonitor=` and to the saga middleware as `sagaMiddleware.run(rootSaga, { sagaMonitor })`. Supports both redux-saga v1.x (`CALL.payload`) and v0.x (`CALL` direct).
+- `useSentinelInteraction()` — returns `{ activeId, activeRect, isActive, setIsActive, showOutlines, setShowOutlines, highlightName, setHighlightName, reduxStore, registerHover, unregisterHover, openDialog }`.
+- `useSentinelDialog()` — returns `{ openDialogId, dialogMeta, closeDialog }`.
+- `useSentinel()` — merged shorthand for both contexts above; returns noops outside a provider.
 - CSS must be imported separately: `@sentinel-core/sentinel/index.css`
 
-Uses **classic JSX runtime** (`React.createElement`) — `jsxRuntime: "classic"` in Vite config and `esbuild.jsxFactory: "React.createElement"`. Webpack consumers must set `conditionNames: ["require", "default"]` in resolve config.
+Uses **classic JSX runtime** (`React.createElement`) — `jsxRuntime: "classic"` in Vite config. Webpack consumers must set `conditionNames: ["require", "default"]` in resolve config.
+
+#### CSS scoping
+
+All Portal-rendered elements are wrapped in `<div className="sentinel-root">`. The stylesheet uses `.sentinel-root` as a root selector so sentinel styles never bleed into the host app.
 
 #### Internal UI layers (`src/ui/`)
-- `ui/components/` — thin wrappers around `@huin-core/*` primitives (Dialog, Tabs, Popover, etc.), styled with Tailwind CSS 4.
-- `ui/widgets/` — composite widgets used inside `SentinelDialog`: `MarkdownViewer`, `PropsViewer`, `SentinelDialog`, `Spotlight`.
 
-`SentinelDialog` has four tabs: `.md` (renders the component's markdown doc), `Props Tracker` (current props + history), `API Layer` (stub), `Event Tracker` (stub). The dialog header shows a `vscode://file/...` link to the source file.
+- `ui/components/` — thin wrappers around `@huin-core/*` primitives (Dialog, Tabs, Popover, Accordion, etc.), styled with Tailwind CSS 4.
+- `ui/widgets/` — composite widgets:
+  - `Spotlight` — renders 4 dark/blurred `position: fixed` panels (top/bottom/left/right) surrounding the active component's `DOMRect`, creating a clear "hole" without blurring the active component. Avoids CSS stacking context issues by using Portal for both the overlay and the dashed border indicator (`z-[999]` for panels, `z-[1000]` for border). Scroll clears hover state via a `capture: true` window scroll listener in `SentinelProvider`.
+  - `SentinelDialog` — tabbed dialog with four tabs: `.md` (markdown doc), `Props Tracker` (current props + history via `PropsViewer`), `API Layer` (stub), `Event Tracker` (stub). Header shows `vscode://file/...` link and render count badge.
+  - `SentinelToolbar` — floating `ScanEye` button (bottom-right, `z-[9999]`) rendered via Portal. Opens a Popover with three tabs: **Controls** (Active toggle, Outline All toggle, component name filter), **Redux** (live state tree with search + accordion, Client/Server tabs when `serverState` provided), **Saga** (effect call list with search, status icons, args/result/error, Client/Server tabs when `serverSagaEffects` provided). Keyboard shortcut `Ctrl+Shift+S` toggles `isActive`.
+  - `PropsViewer` — renders current props and accordion history of last 6 snapshots using `JsonNode`.
+  - `JsonNode` — recursive JSON tree renderer with collapse-from-depth support.
 
 ### Package: `@sentinel-core/sentinel-plugin`
 
@@ -82,7 +93,7 @@ If a component file `src/components/Foo.jsx` has a sibling `src/components/Foo.m
 
 ### Escape Hatches
 
-- In `sentinelVitePlugin`/`sentinelWebpackPlugin` options, use `exclude` to skip specific files (e.g., `["**/*.test.tsx", "**/SomeComponent.tsx"]`).
+- In plugin options, use `exclude` to skip specific files (e.g., `["**/*.test.tsx", "**/SomeComponent.tsx"]`).
 
 ### Playgrounds
 
