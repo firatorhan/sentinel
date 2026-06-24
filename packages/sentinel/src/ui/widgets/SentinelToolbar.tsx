@@ -14,64 +14,58 @@ import { useSentinelInteraction } from "../../react";
 import { type ReduxStore } from "../../react/provider";
 import { type SentinelSagaMonitor, type EffectRecord } from "../../saga/createSentinelSagaMonitor";
 import { cn } from "../../utils/cn";
+import { getPreview, filterState, filteredEntries } from "../../utils/stateSearch";
 
-const getPreview = (value: unknown): string => {
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
-  if (typeof value === "boolean") return String(value);
-  if (typeof value === "number") return String(value);
-  if (typeof value === "string") return `"${value.length > 20 ? value.slice(0, 20) + "…" : value}"`;
-  if (Array.isArray(value)) return `[${value.length}]`;
-  if (typeof value === "object") {
-    const n = Object.keys(value as object).length;
-    return `{ ${n} key${n !== 1 ? "s" : ""} }`;
-  }
-  return String(value);
-};
-
-const filterState = (value: unknown, query: string): unknown => {
-  if (!query) return value;
-  const q = query.toLowerCase();
-
-  if (value === null || typeof value !== "object") {
-    return String(value).toLowerCase().includes(q) ? value : undefined;
-  }
-
-  if (Array.isArray(value)) {
-    const items = value
-      .map((item) => filterState(item, query))
-      .filter((item) => item !== undefined);
-    return items.length > 0 ? items : undefined;
-  }
-
-  const result: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (k.toLowerCase().includes(q)) {
-      result[k] = v;
-    } else {
-      const child = filterState(v, query);
-      if (child !== undefined) result[k] = child;
-    }
-  }
-  return Object.keys(result).length > 0 ? result : undefined;
-};
+const ReduxAccordion = ({
+  items,
+  openKeys,
+  collapseDepth,
+  search,
+}: {
+  items: { key: string; displayValue: unknown }[];
+  openKeys: string[] | undefined;
+  collapseDepth: number;
+  search: string;
+}) =>
+  items.length === 0 ? (
+    <span className="text-muted-foreground italic text-xs px-1">No results for "{search}"</span>
+  ) : (
+    <Accordion type="multiple" value={openKeys} className="w-full font-mono text-xs">
+      {items.map(({ key, displayValue }) => (
+        <AccordionItem key={key} value={key}>
+          <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+            <span className="flex-1 text-left truncate text-foreground">{key}</span>
+            <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
+              {getPreview(displayValue)}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pb-2! pt-0 px-1">
+            <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+              <JsonNode value={displayValue} collapseFromDepth={collapseDepth} />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
 
 const ReduxStatePane = ({ state }: { state: unknown }) => {
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
 
-  const filtered = filterState(state, search);
   const isPlainObject = state !== null && typeof state === "object" && !Array.isArray(state);
-  const entries = isPlainObject ? Object.entries(state as Record<string, unknown>) : [];
+  const entries = React.useMemo(
+    () => (isPlainObject ? Object.entries(state as Record<string, unknown>) : []),
+    [isPlainObject, state],
+  );
 
-  const JsonTree = ({ value, collapseDepth }: { value: unknown; collapseDepth: number }) => {
-    const f = filterState(value, search);
-    return f !== undefined ? (
-      <JsonNode value={f} collapseFromDepth={collapseDepth} />
-    ) : (
-      <span className="text-muted-foreground italic">No results for "{search}"</span>
-    );
-  };
+  const filtered_entries = React.useMemo(
+    () => filteredEntries(entries, search),
+    [entries, search],
+  );
+
+  const openKeys = search ? filtered_entries.map((e) => e.key) : undefined;
+  const flatFiltered = filterState(state, search);
 
   return (
     <>
@@ -93,32 +87,16 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
         </div>
 
         <div className="max-h-60 overflow-y-auto">
-          {search || !isPlainObject || entries.length === 0 ? (
+          {isPlainObject && entries.length > 0 ? (
+            <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={1} search={search} />
+          ) : (
             <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-              {filtered !== undefined ? (
-                <JsonNode value={filtered} collapseFromDepth={1} />
+              {flatFiltered !== undefined ? (
+                <JsonNode value={flatFiltered} collapseFromDepth={1} />
               ) : (
                 <span className="text-muted-foreground italic">No results for "{search}"</span>
               )}
             </div>
-          ) : (
-            <Accordion type="multiple" className="w-full font-mono text-xs">
-              {entries.map(([key, value]) => (
-                <AccordionItem key={key} value={key}>
-                  <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
-                    <span className="flex-1 text-left truncate text-foreground">{key}</span>
-                    <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
-                      {getPreview(value)}
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-2! pt-0 px-1">
-                    <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-                      <JsonTree value={value} collapseDepth={1} />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
           )}
         </div>
       </div>
@@ -135,32 +113,16 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
             className="h-8 text-sm shrink-0"
           />
           <div className="overflow-y-auto min-h-0 flex-1">
-            {search || !isPlainObject || entries.length === 0 ? (
+            {isPlainObject && entries.length > 0 ? (
+              <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={2} search={search} />
+            ) : (
               <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-                {filtered !== undefined ? (
-                  <JsonNode value={filtered} collapseFromDepth={2} />
+                {flatFiltered !== undefined ? (
+                  <JsonNode value={flatFiltered} collapseFromDepth={2} />
                 ) : (
                   <span className="text-muted-foreground italic">No results for "{search}"</span>
                 )}
               </div>
-            ) : (
-              <Accordion type="multiple" className="w-full font-mono text-xs">
-                {entries.map(([key, value]) => (
-                  <AccordionItem key={key} value={key}>
-                    <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
-                      <span className="flex-1 text-left truncate text-foreground">{key}</span>
-                      <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
-                        {getPreview(value)}
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-2! pt-0 px-1">
-                      <div className="bg-primary text-primary-foreground p-2! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-                        <JsonTree value={value} collapseDepth={2} />
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
             )}
           </div>
         </DialogContent>
