@@ -49,6 +49,7 @@ export default defineConfig({
   },
 
   build: {
+    target: "es2019",
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "Sentinel",
