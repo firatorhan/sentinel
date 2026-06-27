@@ -35,8 +35,9 @@ export const Sentinel = ({
     propHistoryRef.current = [safeProps, ...propHistoryRef.current].slice(0, 6);
   }
 
+  if (!isActive) return <>{children}</>;
+
   const isNameHighlighted =
-    isActive &&
     !!highlightName &&
     !!componentName &&
     componentName.toLowerCase().includes(highlightName.toLowerCase());
