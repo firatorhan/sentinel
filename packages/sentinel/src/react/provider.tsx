@@ -11,6 +11,14 @@ import { SentinelToolbar } from "../ui/widgets/SentinelToolbar";
 import { Spotlight } from "../ui/widgets/Spotlight";
 import { type SentinelSagaMonitor, type EffectRecord } from "../saga/createSentinelSagaMonitor";
 
+export type ExternalLink = {
+  match: (componentName: string, props: Record<string, any>) => boolean;
+  url: (props: Record<string, any>, sagaEffects: EffectRecord[]) => string;
+  label: string;
+};
+
+type ResolvedExternalLink = { label: string; url: string };
+
 type DialogMeta = {
   componentName?: string;
   sourceFile?: string;
@@ -18,6 +26,7 @@ type DialogMeta = {
   propHistory?: Record<string, any>[];
   md?: string;
   componentProps?: Record<string, any>;
+  externalLinks?: ResolvedExternalLink[];
 };
 
 export type ReduxStore = {
@@ -68,12 +77,14 @@ export const SentinelProvider = ({
   sagaMonitor,
   serverState,
   serverSagaEffects,
+  externalLinks,
 }: {
   children: React.ReactNode;
   store?: ReduxStore;
   sagaMonitor?: SentinelSagaMonitor;
   serverState?: unknown;
   serverSagaEffects?: EffectRecord[];
+  externalLinks?: ExternalLink[];
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
@@ -136,10 +147,18 @@ export const SentinelProvider = ({
       renderCount?: number,
       propHistory?: Record<string, any>[],
     ) => {
+      const sagaEffects = [
+        ...(sagaMonitor?._getEffects() ?? []),
+        ...(serverSagaEffects ?? []),
+      ];
+      const resolvedLinks = externalLinks
+        ?.filter((link) => componentName && componentProps && link.match(componentName, componentProps))
+        .map((link) => ({ label: link.label, url: link.url(componentProps ?? {}, sagaEffects) }))
+        .filter((link) => link.url);
       setOpenDialogId(id);
-      setDialogMeta({ componentName, sourceFile, renderCount, propHistory, md, componentProps });
+      setDialogMeta({ componentName, sourceFile, renderCount, propHistory, md, componentProps, externalLinks: resolvedLinks });
     },
-    [],
+    [externalLinks, sagaMonitor, serverSagaEffects],
   );
 
   const closeDialog = useCallback(() => {

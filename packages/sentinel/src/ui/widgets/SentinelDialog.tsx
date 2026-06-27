@@ -60,6 +60,21 @@ export const SentinelDialog = () => {
                   {getDisplayPath(dialogMeta.sourceFile)}
                 </a>
               )}
+              {dialogMeta?.externalLinks && dialogMeta.externalLinks.length > 0 && (
+                <span className="flex items-center justify-center gap-2 mt-1">
+                  {dialogMeta.externalLinks.map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-normal text-sky-400 hover:text-sky-300 transition-colors"
+                    >
+                      {link.label} →
+                    </a>
+                  ))}
+                </span>
+              )}
             </DialogTitle>
             <DialogDescription>
               <TabsList className="grid w-full grid-cols-4">
