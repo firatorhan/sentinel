@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# Sentinel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Runtime intelligence for React UIs. Hover over any component to inspect it, click to explore its props, Redux state, and Saga effects — without touching your source code.
 
-Currently, two official plugins are available:
+## Packages
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Package | Version | Description |
+|---|---|---|
+| [`@sentinel-core/sentinel`](./packages/sentinel) | [![npm](https://img.shields.io/npm/v/@sentinel-core/sentinel)](https://www.npmjs.com/package/@sentinel-core/sentinel) | React provider + toolbar UI |
+| [`@sentinel-core/sentinel-plugin`](./packages/sentinel-plugin) | [![npm](https://img.shields.io/npm/v/@sentinel-core/sentinel-plugin)](https://www.npmjs.com/package/@sentinel-core/sentinel-plugin) | Vite / Webpack / Rollup / esbuild build plugin |
 
-## React Compiler
+## Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install @sentinel-core/sentinel
+npm install -D @sentinel-core/sentinel-plugin
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**1. Add the plugin to your bundler config:**
 
 ```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+// vite.config.js
+import { sentinelVitePlugin } from "@sentinel-core/sentinel-plugin";
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+export default {
+  plugins: [sentinelVitePlugin({ include: ["src/**/*.tsx"] }), react()],
+};
 ```
+
+**2. Wrap your app with `SentinelProvider`:**
+
+```jsx
+import { SentinelProvider } from "@sentinel-core/sentinel";
+import "@sentinel-core/sentinel/index.css";
+
+function ClientApp() {
+  return (
+    <SentinelProvider>
+      <App />
+    </SentinelProvider>
+  );
+}
+```
+
+**3. Open the toolbar** — click the `ScanEye` button (bottom-right) or press `Ctrl+Shift+S`.
+
+## Features
+
+- **Component inspector** — hover to highlight, click to open a dialog with props, render count, and source link
+- **Props history** — last 6 prop snapshots with accordion diff view
+- **Redux tab** — live state tree with deep search, Client/Server toggle for SSR
+- **Saga tab** — effect call list with deep search across args/result/error, status indicators
+- **External links** — configurable deep-links in the dialog header (e.g. open a Voltran MFE)
+- **`.md` docs** — place a `Foo.md` next to `Foo.jsx` to show component docs in the dialog
+
+## Monorepo
+
+This is an npm workspace monorepo.
+
+```
+packages/
+  sentinel/         → @sentinel-core/sentinel
+  sentinel-plugin/  → @sentinel-core/sentinel-plugin
+playground/         → Vite + React 19 (not a workspace member)
+playground-webpack/ → Webpack 5 + Express
+```
+
+```bash
+# Build everything
+npm run build
+
+# Run webpack playground (http://localhost:3000)
+npm run dev
+
+# Run Vite playground (http://localhost:5173)
+cd playground && npm install && npm run dev
+```
+
+## License
+
+MIT
