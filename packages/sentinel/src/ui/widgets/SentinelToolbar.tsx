@@ -192,7 +192,38 @@ const STATUS_COLOR: Record<EffectRecord["status"], string> = {
   cancelled: "text-muted-foreground",
 };
 
-const EffectList = ({ effects }: { effects: EffectRecord[] }) => {
+const safeFilterState = (value: unknown, q: string): boolean => {
+  try {
+    return filterState(value, q) !== undefined;
+  } catch {
+    try {
+      return (JSON.stringify(value) ?? "").toLowerCase().includes(q);
+    } catch {
+      return false;
+    }
+  }
+};
+
+const effectMatchesSearch = (effect: EffectRecord, q: string): boolean => {
+  if (effect.fnName.toLowerCase().includes(q)) return true;
+  if (safeFilterState(effect.args, q)) return true;
+  if (effect.result !== undefined && safeFilterState(effect.result, q)) return true;
+  if (effect.error !== undefined && safeFilterState(effect.error, q)) return true;
+  return false;
+};
+
+const EffectList = ({ effects, search = "" }: { effects: EffectRecord[]; search?: string }) => {
+  const q = search.toLowerCase();
+
+  const filtered = q ? effects.filter((e) => effectMatchesSearch(e, q)) : effects;
+
+  const [openItems, setOpenItems] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    setOpenItems(q ? filtered.map((e) => String(e.id)) : []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
   if (effects.length === 0) {
     return (
       <div className="py-4 text-center text-xs text-muted-foreground">
@@ -201,49 +232,62 @@ const EffectList = ({ effects }: { effects: EffectRecord[] }) => {
     );
   }
 
-  return (
-    <Accordion type="multiple" className="w-full font-mono text-xs">
-      {effects.map((effect) => (
-        <AccordionItem key={effect.id} value={String(effect.id)}>
-          <AccordionTrigger
-            className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal"
-          >
-            <span className={cn("shrink-0 w-4 text-center", STATUS_COLOR[effect.status])}>
-              {STATUS_ICON[effect.status]}
-            </span>
-            <span className="flex-1 truncate text-left text-foreground mx-2">{effect.fnName}</span>
-            {effect.duration !== undefined && (
-              <span className="shrink-0 text-muted-foreground mr-1">{effect.duration}ms</span>
-            )}
-          </AccordionTrigger>
+  if (filtered.length === 0) {
+    return (
+      <span className="text-muted-foreground italic text-xs px-1">No results for "{search}"</span>
+    );
+  }
 
-          <AccordionContent className="pb-2! pt-0 px-2">
-            <div className="space-y-1.5">
-              {(effect.args?.length ?? 0) > 0 && (
-                <div className="bg-muted p-2! rounded overflow-x-hidden">
-                  <div className="text-muted-foreground mb-1!">args</div>
-                  <JsonNode value={effect.args} collapseFromDepth={1} />
-                </div>
+  return (
+    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full font-mono text-xs">
+      {filtered.map((effect) => {
+        const safeDisplay = (val: unknown) => { try { return filterState(val, q); } catch { return undefined; } };
+        const displayArgs = q ? (safeDisplay(effect.args) ?? effect.args) : effect.args;
+        const displayResult = q && effect.result !== undefined ? (safeDisplay(effect.result) ?? effect.result) : effect.result;
+        const displayError = q && effect.error !== undefined ? (safeDisplay(effect.error) ?? effect.error) : effect.error;
+
+        return (
+          <AccordionItem key={effect.id} value={String(effect.id)}>
+            <AccordionTrigger
+              className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal"
+            >
+              <span className={cn("shrink-0 w-4 text-center", STATUS_COLOR[effect.status])}>
+                {STATUS_ICON[effect.status]}
+              </span>
+              <span className="flex-1 truncate text-left text-foreground mx-2">{effect.fnName}</span>
+              {effect.duration !== undefined && (
+                <span className="shrink-0 text-muted-foreground mr-1">{effect.duration}ms</span>
               )}
-              {effect.result !== undefined && (
-                <div className="bg-primary text-primary-foreground p-2! rounded overflow-x-hidden">
-                  <div className="text-muted-foreground mb-1">result</div>
-                  <JsonNode value={effect.result} collapseFromDepth={1} />
-                </div>
-              )}
-              {effect.error !== undefined && (
-                <div className="bg-destructive/10 text-destructive p-2 rounded overflow-x-hidden">
-                  <div className="mb-1! font-medium">error</div>
-                  <JsonNode
-                    value={effect.error instanceof Error ? effect.error.message : effect.error}
-                    collapseFromDepth={1}
-                  />
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
+            </AccordionTrigger>
+
+            <AccordionContent className="pb-2! pt-0 px-2">
+              <div className="space-y-1.5">
+                {(effect.args?.length ?? 0) > 0 && (
+                  <div className="bg-muted p-2! rounded overflow-x-hidden">
+                    <div className="text-muted-foreground mb-1!">args</div>
+                    <JsonNode value={displayArgs} collapseFromDepth={q ? 10 : 1} />
+                  </div>
+                )}
+                {effect.result !== undefined && (
+                  <div className="bg-primary text-primary-foreground p-2! rounded overflow-x-hidden">
+                    <div className="text-muted-foreground mb-1">result</div>
+                    <JsonNode value={displayResult} collapseFromDepth={q ? 10 : 1} />
+                  </div>
+                )}
+                {displayError !== undefined && (
+                  <div className="bg-destructive/10 text-destructive p-2 rounded overflow-x-hidden">
+                    <div className="mb-1! font-medium">error</div>
+                    <JsonNode
+                      value={displayError instanceof Error ? displayError.message : displayError}
+                      collapseFromDepth={q ? 10 : 1}
+                    />
+                  </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
     </Accordion>
   );
 };
@@ -253,16 +297,12 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
 
-  const filtered = search
-    ? effects.filter((e) => e.fnName.toLowerCase().includes(search.toLowerCase()))
-    : effects;
-
   return (
     <>
       <div className="py-3! space-y-2!">
         <div className="flex items-center gap-1.5">
           <Input
-            placeholder="Search calls…"
+            placeholder="Deep search calls…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-7 text-xs"
@@ -284,7 +324,7 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
           </button>
         </div>
         <div className="max-h-60 overflow-y-auto">
-          <EffectList effects={filtered} />
+          <EffectList effects={effects} search={search} />
         </div>
       </div>
 
@@ -294,13 +334,13 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             <DialogTitle>Saga Calls</DialogTitle>
           </DialogHeader>
           <Input
-            placeholder="Search calls…"
+            placeholder="Deep search calls…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-sm shrink-0"
           />
           <div className="overflow-y-auto min-h-0 flex-1">
-            <EffectList effects={filtered} />
+            <EffectList effects={effects} search={search} />
           </div>
         </DialogContent>
       </Dialog>
