@@ -17,6 +17,7 @@ import { useSentinelDialog } from "../../react";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { PropsViewer } from "./PropsViewer";
 import React from "react";
+import { FlaskConical } from "lucide-react";
 
 const getDisplayPath = (sourceFile: string) => {
   const [filePath] = sourceFile.split(":");
@@ -80,8 +81,14 @@ export const SentinelDialog = () => {
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="md">.md</TabsTrigger>
                 <TabsTrigger value="props-tracker">Props Tracker</TabsTrigger>
-                <TabsTrigger value="api-layer">API Layer</TabsTrigger>
-                <TabsTrigger value="event-tracker">Event Tracker</TabsTrigger>
+                <TabsTrigger value="api-layer" disabled className="gap-1 opacity-50 cursor-not-allowed">
+                  <FlaskConical size={11} />
+                  API Layer
+                </TabsTrigger>
+                <TabsTrigger value="event-tracker" disabled className="gap-1 opacity-50 cursor-not-allowed">
+                  <FlaskConical size={11} />
+                  Event Tracker
+                </TabsTrigger>
               </TabsList>
             </DialogDescription>
           </DialogHeader>

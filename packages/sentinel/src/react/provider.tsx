@@ -10,6 +10,7 @@ import { SentinelDialog } from "../ui/widgets/SentinelDialog";
 import { SentinelToolbar } from "../ui/widgets/SentinelToolbar";
 import { Spotlight } from "../ui/widgets/Spotlight";
 import { type SentinelSagaMonitor, type EffectRecord } from "../saga/createSentinelSagaMonitor";
+import { type SentinelReduxMiddleware, type ActionRecord } from "../redux/createSentinelReduxMiddleware";
 
 export type ExternalLink = {
   match: (componentName: string, props: Record<string, any>) => boolean;
@@ -75,15 +76,19 @@ export const SentinelProvider = ({
   children,
   store: reduxStore,
   sagaMonitor,
+  reduxMiddleware,
   serverState,
   serverSagaEffects,
+  serverActionLog,
   externalLinks,
 }: {
   children: React.ReactNode;
   store?: ReduxStore;
   sagaMonitor?: SentinelSagaMonitor;
+  reduxMiddleware?: SentinelReduxMiddleware;
   serverState?: unknown;
   serverSagaEffects?: EffectRecord[];
+  serverActionLog?: ActionRecord[];
   externalLinks?: ExternalLink[];
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -183,7 +188,7 @@ export const SentinelProvider = ({
         <Spotlight active={isActive}>
           <SentinelDialog />
         </Spotlight>
-        <SentinelToolbar sagaMonitor={sagaMonitor} serverState={serverState} serverSagaEffects={serverSagaEffects} />
+        <SentinelToolbar sagaMonitor={sagaMonitor} reduxMiddleware={reduxMiddleware} serverState={serverState} serverSagaEffects={serverSagaEffects} serverActionLog={serverActionLog} />
       </SentinelDialogContext.Provider>
     </SentinelInteractionContext.Provider>
   );

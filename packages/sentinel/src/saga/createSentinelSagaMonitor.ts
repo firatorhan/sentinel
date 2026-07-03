@@ -1,10 +1,12 @@
 const MAX_RECORDS = 100;
 
 export type EffectStatus = "pending" | "resolved" | "rejected" | "cancelled";
+export type EffectType = "CALL" | "FORK" | "SPAWN" | "TAKE" | "PUT" | "unknown";
 
 export type EffectRecord = {
   id: number;
   parentId: number;
+  type: EffectType;
   fnName: string;
   args: unknown[];
   status: EffectStatus;
@@ -79,17 +81,45 @@ export const createSentinelSagaMonitor = (): SentinelSagaMonitor => {
     effectTriggered({ effectId, parentEffectId, effect }) {
       const e = effect as any;
 
-      // redux-saga v1.x+: { type: "CALL", payload: { fn, args } }
-      // redux-saga v0.x:  { CALL: { fn, args } }
+      let effectType: EffectType = "unknown";
       let fnName: string | undefined;
       let args: unknown[] | undefined;
 
+      const fnInfo = (payload: any) => ({
+        name: payload?.fn?.name || payload?.fn?.displayName || "anonymous",
+        args: payload?.args ?? [],
+      });
+
+      // redux-saga v1.x+
       if (e?.type === "CALL") {
-        fnName = e.payload?.fn?.name;
-        args = e.payload?.args;
-      } else if (e?.CALL) {
-        fnName = e.CALL?.fn?.name;
-        args = e.CALL?.args;
+        effectType = "CALL";
+        const f = fnInfo(e.payload); fnName = f.name; args = f.args;
+      } else if (e?.type === "FORK") {
+        effectType = e.payload?.detached ? "SPAWN" : "FORK";
+        const f = fnInfo(e.payload); fnName = f.name; args = f.args;
+      } else if (e?.type === "TAKE") {
+        effectType = "TAKE";
+        fnName = String(e.payload?.pattern ?? "*");
+        args = [];
+      } else if (e?.type === "PUT") {
+        effectType = "PUT";
+        fnName = e.payload?.action?.type ?? "unknown";
+        args = e.payload?.action ? [e.payload.action] : [];
+      }
+      // redux-saga v0.x
+      else if (e?.CALL) {
+        effectType = "CALL";
+        fnName = e.CALL?.fn?.name || "anonymous"; args = e.CALL?.args ?? [];
+      } else if (e?.FORK) {
+        effectType = "FORK";
+        fnName = e.FORK?.fn?.name || "anonymous"; args = e.FORK?.args ?? [];
+      } else if (e?.TAKE) {
+        effectType = "TAKE";
+        fnName = String(e.TAKE?.pattern ?? "*"); args = [];
+      } else if (e?.PUT) {
+        effectType = "PUT";
+        fnName = e.PUT?.action?.type ?? "unknown";
+        args = e.PUT?.action ? [e.PUT.action] : [];
       } else {
         return;
       }
@@ -97,6 +127,7 @@ export const createSentinelSagaMonitor = (): SentinelSagaMonitor => {
       effects.set(effectId, {
         id: effectId,
         parentId: parentEffectId,
+        type: effectType,
         fnName: fnName || "anonymous",
         args: args ?? [],
         status: "pending",
@@ -156,6 +187,7 @@ export const createSentinelSagaMonitor = (): SentinelSagaMonitor => {
         .map((e) => ({
           id: e.id,
           parentId: e.parentId,
+          type: e.type,
           fnName: e.fnName,
           status: e.status,
           startedAt: e.startedAt,

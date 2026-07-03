@@ -4,6 +4,7 @@ import { ProductCard } from "./components/ProductCard.jsx";
 import { VoltranFragment } from "./components/VoltranFragment.jsx";
 import { mockStore } from "./mockStore.js";
 import { mockSagaMonitor } from "./mockSagaMonitor.js";
+import { mockReduxMiddleware } from "./mockReduxMiddleware.js";
 
 const fragments = [
   {
@@ -61,6 +62,7 @@ function App() {
         <SentinelProvider
           store={mockStore}
           sagaMonitor={mockSagaMonitor}
+          reduxMiddleware={mockReduxMiddleware}
           externalLinks={[voltranExternalLink({ label: "Open in Voltran" })]}
         >
           <div className="flex gap-4 flex-nowrap justify-start">
