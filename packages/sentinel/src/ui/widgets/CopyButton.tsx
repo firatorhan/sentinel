@@ -1,5 +1,6 @@
 import React from "react";
 import { Copy, Check } from "lucide-react";
+import { Button } from "../components/Button";
 import { cn } from "../../utils/cn";
 
 export const CopyButton = ({
@@ -26,16 +27,20 @@ export const CopyButton = ({
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="xs"
       onClick={copy}
       className={cn(
-        "shrink-0 inline-flex items-center gap-1 text-xs transition-colors cursor-pointer whitespace-nowrap",
-        copied ? "text-emerald-400" : "text-muted-foreground hover:text-foreground",
+        "shrink-0 whitespace-nowrap",
+        copied
+          ? "text-emerald-400 hover:text-emerald-400"
+          : "text-muted-foreground hover:text-foreground",
         className,
       )}
     >
-      {copied ? <Check size={11} /> : <Copy size={11} />}
+      {copied ? <Check /> : <Copy />}
       {copied ? copiedLabel : label}
-    </button>
+    </Button>
   );
 };

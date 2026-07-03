@@ -2,6 +2,7 @@ import React from "react";
 import { ScanEye, Maximize2, Clock, Check, X, Ban } from "lucide-react";
 import { Portal } from "@huin-core/react-portal";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/Popover";
+import { Button } from "../components/Button";
 import { Switch } from "../components/Switch";
 import { Label } from "../components/Label";
 import { Separator } from "../components/Separator";
@@ -84,13 +85,15 @@ const ExpandablePane = ({
             className="h-7 text-xs"
           />
           {actions}
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => setExpanded(true)}
             title="Expand"
-            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
           >
-            <Maximize2 size={14} />
-          </button>
+            <Maximize2 />
+          </Button>
         </div>
         {filters}
         <ScrollArea className="flex-1 min-h-0">
@@ -352,24 +355,28 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
   const actions = (
     <>
       {systemCount > 0 && (
-        <button
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={() => setShowSystem(s => !s)}
           title="Toggle framework actions (@@…, persist/…)"
           className={cn(
-            "shrink-0 text-xs transition-colors",
+            "shrink-0",
             showSystem ? "text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
           System ({systemCount})
-        </button>
+        </Button>
       )}
       {onClear && records.length > 0 && (
-        <button
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={onClear}
-          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
         >
           Clear
-        </button>
+        </Button>
       )}
     </>
   );
@@ -662,12 +669,14 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
   );
 
   const actions = onClear && effects.length > 0 && (
-    <button
+    <Button
+      variant="ghost"
+      size="xs"
       onClick={onClear}
-      className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      className="shrink-0 text-muted-foreground hover:text-foreground"
     >
       Clear
-    </button>
+    </Button>
   );
 
   return (
