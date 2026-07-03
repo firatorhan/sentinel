@@ -3,7 +3,7 @@ import { default as traverseModule, NodePath } from "@babel/traverse";
 import { default as generateModule } from "@babel/generator";
 import * as t from "@babel/types";
 
-import { scanFile } from "./scanner";
+import { scanFile, isKnownHocCall } from "./scanner";
 import { wrapFunctionBody, wrapClassRenderMethod } from "./wrapper";
 
 const traverse = (traverseModule as any).default || traverseModule;
@@ -60,69 +60,38 @@ export function transformCode(code: string, id: string, isInInclude: boolean, ad
 
   ast.program.body.unshift(...importsToInject);
 
+  const wrapNamed = (pathNode: NodePath<any>, name: string) => {
+    const info = componentsToWrap.get(name)!;
+    const line = pathNode.node.loc?.start.line ?? 1;
+    wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
+  };
+
+  // Handles both `const Foo = () => …` and `const Foo = memo/forwardRef(() => …)`
+  const visitComponentFunction = (
+    pathNode: NodePath<t.ArrowFunctionExpression | t.FunctionExpression>,
+  ) => {
+    const parent = pathNode.parentPath.node;
+    if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
+      wrapNamed(pathNode, parent.id.name);
+    } else if (
+      t.isCallExpression(parent) &&
+      isKnownHocCall(parent.callee) &&
+      parent.arguments[0] === pathNode.node
+    ) {
+      const grandParent = pathNode.parentPath.parentPath?.node;
+      if (t.isVariableDeclarator(grandParent) && t.isIdentifier(grandParent.id) && componentsToWrap.has(grandParent.id.name)) {
+        wrapNamed(pathNode, grandParent.id.name);
+      }
+    }
+  };
+
   // 3. Aşama: Sihirli AST Dönüşümü (Sarmalama)
   traverse(ast, {
-    ArrowFunctionExpression(pathNode: NodePath<t.ArrowFunctionExpression>) {
-      const parent = pathNode.parentPath.node;
-      if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
-        const name = parent.id.name;
-        const info = componentsToWrap.get(name)!;
-        const line = pathNode.node.loc?.start.line ?? 1;
-        wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
-      } else if (t.isCallExpression(parent)) {
-        const callee = parent.callee;
-        const isKnownHoc =
-          (t.isIdentifier(callee) && (callee.name === 'memo' || callee.name === 'forwardRef')) ||
-          (t.isMemberExpression(callee) && t.isIdentifier(callee.property) &&
-            (callee.property.name === 'memo' || callee.property.name === 'forwardRef'));
-        if (isKnownHoc) {
-          const argIndex = parent.arguments.indexOf(pathNode.node);
-          if (argIndex === 0) {
-            const grandParent = pathNode.parentPath.parentPath?.node;
-            if (t.isVariableDeclarator(grandParent) && t.isIdentifier(grandParent.id) && componentsToWrap.has(grandParent.id.name)) {
-              const name = grandParent.id.name;
-              const info = componentsToWrap.get(name)!;
-              const line = pathNode.node.loc?.start.line ?? 1;
-              wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
-            }
-          }
-        }
-      }
-    },
-    FunctionExpression(pathNode: NodePath<t.FunctionExpression>) {
-      const parent = pathNode.parentPath.node;
-      if (t.isVariableDeclarator(parent) && t.isIdentifier(parent.id) && componentsToWrap.has(parent.id.name)) {
-        const name = parent.id.name;
-        const info = componentsToWrap.get(name)!;
-        const line = pathNode.node.loc?.start.line ?? 1;
-        wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
-      } else if (t.isCallExpression(parent)) {
-        const callee = parent.callee;
-        const isKnownHoc =
-          (t.isIdentifier(callee) && (callee.name === 'memo' || callee.name === 'forwardRef')) ||
-          (t.isMemberExpression(callee) && t.isIdentifier(callee.property) &&
-            (callee.property.name === 'memo' || callee.property.name === 'forwardRef'));
-        if (isKnownHoc) {
-          const argIndex = parent.arguments.indexOf(pathNode.node);
-          if (argIndex === 0) {
-            const grandParent = pathNode.parentPath.parentPath?.node;
-            if (t.isVariableDeclarator(grandParent) && t.isIdentifier(grandParent.id) && componentsToWrap.has(grandParent.id.name)) {
-              const name = grandParent.id.name;
-              const info = componentsToWrap.get(name)!;
-              const line = pathNode.node.loc?.start.line ?? 1;
-              wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
-            }
-          }
-        }
-      }
-    },
+    ArrowFunctionExpression: visitComponentFunction,
+    FunctionExpression: visitComponentFunction,
     FunctionDeclaration(pathNode: NodePath<t.FunctionDeclaration>) {
       const idNode = pathNode.node.id;
-      if (idNode && componentsToWrap.has(idNode.name)) {
-        const info = componentsToWrap.get(idNode.name)!;
-        const line = pathNode.node.loc?.start.line ?? 1;
-        wrapFunctionBody(pathNode, idNode.name, `${id}:${line}`, info.mdIdentifier);
-      }
+      if (idNode && componentsToWrap.has(idNode.name)) wrapNamed(pathNode, idNode.name);
     },
     ClassDeclaration(pathNode: NodePath<t.ClassDeclaration>) {
       const idNode = pathNode.node.id;

@@ -54,34 +54,36 @@ const ReduxAccordion = ({
     </Accordion>
   );
 
-const ReduxStatePane = ({ state }: { state: unknown }) => {
+// Shared pane shell: search input + optional header actions + optional filter
+// row + scrollable content, plus the same layout duplicated into an expanded
+// Dialog. Content is a render prop so panes can vary depth/layout when expanded.
+const ExpandablePane = ({
+  title,
+  searchPlaceholder,
+  actions,
+  filters,
+  children,
+}: {
+  title: string;
+  searchPlaceholder: string;
+  actions?: React.ReactNode;
+  filters?: React.ReactNode;
+  children: (search: string, expanded: boolean) => React.ReactNode;
+}) => {
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
-
-  const isPlainObject = state !== null && typeof state === "object" && !Array.isArray(state);
-  const entries = React.useMemo(
-    () => (isPlainObject ? Object.entries(state as Record<string, unknown>) : []),
-    [isPlainObject, state],
-  );
-
-  const filtered_entries = React.useMemo(
-    () => filteredEntries(entries, search),
-    [entries, search],
-  );
-
-  const openKeys = search ? filtered_entries.map((e) => e.key) : undefined;
-  const flatFiltered = filterState(state, search);
 
   return (
     <>
       <div className="flex flex-col flex-1 min-h-0 py-3! gap-2">
         <div className="shrink-0 flex items-center gap-1.5">
           <Input
-            placeholder="Search state…"
+            placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-7 text-xs"
           />
+          {actions}
           <button
             onClick={() => setExpanded(true)}
             title="Expand"
@@ -90,53 +92,107 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
             <Maximize2 size={14} />
           </button>
         </div>
-
+        {filters}
         <ScrollArea className="flex-1 min-h-0">
-          <div className="pr-3">
-            {isPlainObject && entries.length > 0 ? (
-              <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={1} search={search} />
-            ) : (
-              <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-                {flatFiltered !== undefined ? (
-                  <JsonNode value={flatFiltered} collapseFromDepth={1} />
-                ) : (
-                  <span className="text-muted-foreground italic">No results for "{search}"</span>
-                )}
-              </div>
-            )}
-          </div>
+          <div className="pr-3">{children(search, false)}</div>
         </ScrollArea>
       </div>
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
         <DialogContent className="flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Redux State</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
-          <Input
-            placeholder="Search state…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 text-sm shrink-0"
-          />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Input
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm"
+            />
+            {actions}
+          </div>
+          {filters}
           <ScrollArea className="flex-1 min-h-0">
-            <div className="pr-3">
-              {isPlainObject && entries.length > 0 ? (
-                <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={2} search={search} />
-              ) : (
-                <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-                  {flatFiltered !== undefined ? (
-                    <JsonNode value={flatFiltered} collapseFromDepth={2} />
-                  ) : (
-                    <span className="text-muted-foreground italic">No results for "{search}"</span>
-                  )}
-                </div>
-              )}
-            </div>
+            <div className="pr-3">{children(search, true)}</div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+// Shared Client/Server switch: renders the client pane directly when no
+// server snapshot exists; otherwise adds the toggle. `clientPane` is null
+// when the client-side source isn't connected.
+const ClientServerSection = ({
+  hasServer,
+  clientPane,
+  serverPane,
+  noClientMessage,
+}: {
+  hasServer: boolean;
+  clientPane: React.ReactNode | null;
+  serverPane: React.ReactNode;
+  noClientMessage: React.ReactNode;
+}) => {
+  const [side, setSide] = React.useState<"client" | "server">("server");
+
+  const noClient = (
+    <Alert className="m-3! p-3!">
+      <AlertDescription className="text-xs">{noClientMessage}</AlertDescription>
+    </Alert>
+  );
+
+  if (!hasServer) return <>{clientPane ?? noClient}</>;
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="shrink-0 flex justify-center pt-2 pb-1">
+        <ToggleGroup
+          type="single"
+          value={side}
+          onValueChange={(v) => v && setSide(v as "client" | "server")}
+        >
+          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      {side === "client" ? (clientPane ?? noClient) : serverPane}
+    </div>
+  );
+};
+
+const ReduxStatePane = ({ state }: { state: unknown }) => {
+  const isPlainObject = state !== null && typeof state === "object" && !Array.isArray(state);
+  const entries = isPlainObject ? Object.entries(state as Record<string, unknown>) : [];
+
+  return (
+    <ExpandablePane title="Redux State" searchPlaceholder="Search state…">
+      {(search, expanded) => {
+        const collapseDepth = expanded ? 2 : 1;
+        if (isPlainObject && entries.length > 0) {
+          const filtered = filteredEntries(entries, search);
+          const openKeys = search ? filtered.map((e) => e.key) : undefined;
+          return <ReduxAccordion items={filtered} openKeys={openKeys} collapseDepth={collapseDepth} search={search} />;
+        }
+        const flatFiltered = filterState(state, search);
+        return (
+          <div
+            className={cn(
+              "bg-primary text-primary-foreground rounded-md font-mono text-xs leading-5 overflow-x-hidden",
+              expanded ? "p-4!" : "p-3!",
+            )}
+          >
+            {flatFiltered !== undefined ? (
+              <JsonNode value={flatFiltered} collapseFromDepth={collapseDepth} />
+            ) : (
+              <span className="text-muted-foreground italic">No results for "{search}"</span>
+            )}
+          </div>
+        );
+      }}
+    </ExpandablePane>
   );
 };
 
@@ -282,8 +338,6 @@ const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?
 };
 
 const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?: () => void }) => {
-  const [search, setSearch] = React.useState("");
-  const [expanded, setExpanded] = React.useState(false);
   const [showSystem, setShowSystem] = React.useState(false);
 
   const systemCount = React.useMemo(
@@ -295,75 +349,35 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
     [records, showSystem],
   );
 
-  const systemToggle = systemCount > 0 && (
-    <button
-      onClick={() => setShowSystem(s => !s)}
-      title="Toggle framework actions (@@…, persist/…)"
-      className={cn(
-        "shrink-0 text-xs transition-colors",
-        showSystem ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+  const actions = (
+    <>
+      {systemCount > 0 && (
+        <button
+          onClick={() => setShowSystem(s => !s)}
+          title="Toggle framework actions (@@…, persist/…)"
+          className={cn(
+            "shrink-0 text-xs transition-colors",
+            showSystem ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          System ({systemCount})
+        </button>
       )}
-    >
-      System ({systemCount})
-    </button>
+      {onClear && records.length > 0 && (
+        <button
+          onClick={onClear}
+          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Clear
+        </button>
+      )}
+    </>
   );
 
   return (
-    <>
-      <div className="flex flex-col flex-1 min-h-0 py-3! gap-2">
-        <div className="shrink-0 flex items-center gap-1.5">
-          <Input
-            placeholder="Search actions…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-7 text-xs"
-          />
-          {systemToggle}
-          {onClear && records.length > 0 && (
-            <button
-              onClick={onClear}
-              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Clear
-            </button>
-          )}
-          <button
-            onClick={() => setExpanded(true)}
-            title="Expand"
-            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="pr-3">
-            <ActionList records={visibleRecords} search={search} />
-          </div>
-        </ScrollArea>
-      </div>
-
-      <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="flex flex-col overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Action Log</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Input
-              placeholder="Search actions…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-sm"
-            />
-            {systemToggle}
-          </div>
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="pr-3">
-              <ActionList records={visibleRecords} search={search} />
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </>
+    <ExpandablePane title="Action Log" searchPlaceholder="Search actions…" actions={actions}>
+      {(search) => <ActionList records={visibleRecords} search={search} />}
+    </ExpandablePane>
   );
 };
 
@@ -375,7 +389,6 @@ const ActionLogTab = ({
   serverActionLog?: ActionRecord[];
 }) => {
   const [records, setRecords] = React.useState<ActionRecord[]>(() => middleware?._getRecords() ?? []);
-  const [side, setSide] = React.useState<"client" | "server">("server");
   const [serverCleared, setServerCleared] = React.useState(false);
 
   React.useEffect(() => {
@@ -384,52 +397,23 @@ const ActionLogTab = ({
     return middleware._subscribe(() => setRecords([...middleware._getRecords()]));
   }, [middleware]);
 
-  const hasServer = serverActionLog != null;
-
-  if (!hasServer) {
-    if (!middleware) {
-      return (
-        <Alert className="m-3! p-3!">
-          <AlertDescription className="text-xs">
-            No middleware connected.
-            <span className="block font-mono mt-1">createSentinelReduxMiddleware()</span>
-          </AlertDescription>
-        </Alert>
-      );
-    }
-    return <ActionLogPane records={records} onClear={() => middleware._clear()} />;
-  }
-
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="shrink-0 flex justify-center pt-2 pb-1">
-        <ToggleGroup
-          type="single"
-          value={side}
-          onValueChange={(v) => v && setSide(v as "client" | "server")}
-        >
-          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
-          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-      {side === "client" ? (
-        middleware ? (
-          <ActionLogPane records={records} onClear={() => middleware._clear()} />
-        ) : (
-          <Alert className="m-3! p-3!">
-            <AlertDescription className="text-xs">No client middleware connected.</AlertDescription>
-          </Alert>
-        )
-      ) : (
-        <ActionLogPane records={serverCleared ? [] : serverActionLog} onClear={() => setServerCleared(true)} />
-      )}
-    </div>
+    <ClientServerSection
+      hasServer={serverActionLog != null}
+      clientPane={middleware ? <ActionLogPane records={records} onClear={() => middleware._clear()} /> : null}
+      serverPane={<ActionLogPane records={serverCleared ? [] : serverActionLog ?? []} onClear={() => setServerCleared(true)} />}
+      noClientMessage={
+        <>
+          No middleware connected.
+          <span className="block font-mono mt-1">createSentinelReduxMiddleware()</span>
+        </>
+      }
+    />
   );
 };
 
 const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefined; serverState?: unknown }) => {
   const [clientState, setClientState] = React.useState<unknown>(store?.getState());
-  const [side, setSide] = React.useState<"client" | "server">("server");
 
   React.useEffect(() => {
     if (!store) return;
@@ -437,46 +421,18 @@ const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefin
     return store.subscribe(() => setClientState(store.getState()));
   }, [store]);
 
-  const hasServer = serverState != null;
-
-  if (!hasServer) {
-    if (!store) {
-      return (
-        <Alert className="m-3! p-3!">
-          <AlertDescription className="text-xs">
-            No store connected.
-            <span className="block font-mono mt-1">{"<SentinelProvider store={store}>"}</span>
-          </AlertDescription>
-        </Alert>
-      );
-    }
-    return <ReduxStatePane state={clientState} />;
-  }
-
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="shrink-0 flex justify-center pt-2 pb-1">
-        <ToggleGroup
-          type="single"
-          value={side}
-          onValueChange={(v) => v && setSide(v as "client" | "server")}
-        >
-          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
-          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-      {side === "client" ? (
-        store ? (
-          <ReduxStatePane state={clientState} />
-        ) : (
-          <Alert className="m-3! p-3!">
-            <AlertDescription className="text-xs">No client store connected.</AlertDescription>
-          </Alert>
-        )
-      ) : (
-        <ReduxStatePane state={serverState} />
-      )}
-    </div>
+    <ClientServerSection
+      hasServer={serverState != null}
+      clientPane={store ? <ReduxStatePane state={clientState} /> : null}
+      serverPane={<ReduxStatePane state={serverState} />}
+      noClientMessage={
+        <>
+          No store connected.
+          <span className="block font-mono mt-1">{"<SentinelProvider store={store}>"}</span>
+        </>
+      }
+    />
   );
 };
 
@@ -697,8 +653,6 @@ const SagaTypeFilters = ({
 
 const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; onClear?: () => void }) => {
   const effects = rawEffects ?? [];
-  const [search, setSearch] = React.useState("");
-  const [expanded, setExpanded] = React.useState(false);
   // CALL-only by default: TAKE/FORK/PUT rows are mostly saga plumbing noise
   const [activeTypes, setActiveTypes] = React.useState<EffectType[]>(["CALL"]);
 
@@ -707,78 +661,37 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
     [effects, activeTypes],
   );
 
-  return (
-    <>
-      <div className="flex flex-col flex-1 min-h-0 py-3! gap-2">
-        <div className="shrink-0 flex items-center gap-1.5">
-          <Input
-            placeholder="Deep search calls…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-7 text-xs"
-          />
-          {onClear && effects.length > 0 && (
-            <button
-              onClick={onClear}
-              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Clear
-            </button>
-          )}
-          <button
-            onClick={() => setExpanded(true)}
-            title="Expand"
-            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Maximize2 size={14} />
-          </button>
-        </div>
-        <SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="pr-3">
-            {effects.length > 0 && filteredEffects.length === 0 ? (
-              <span className="text-muted-foreground italic text-xs px-1">
-                No effects match the type filter.
-              </span>
-            ) : (
-              <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+  const actions = onClear && effects.length > 0 && (
+    <button
+      onClick={onClear}
+      className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+    >
+      Clear
+    </button>
+  );
 
-      <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="flex flex-col overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Saga Calls</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Deep search calls…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 text-sm shrink-0"
-          />
-          <SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="pr-3">
-              {effects.length > 0 && filteredEffects.length === 0 ? (
-                <span className="text-muted-foreground italic text-xs px-1">
-                  No effects match the type filter.
-                </span>
-              ) : (
-                <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </>
+  return (
+    <ExpandablePane
+      title="Saga Calls"
+      searchPlaceholder="Deep search calls…"
+      actions={actions}
+      filters={<SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />}
+    >
+      {(search) =>
+        effects.length > 0 && filteredEffects.length === 0 ? (
+          <span className="text-muted-foreground italic text-xs px-1">
+            No effects match the type filter.
+          </span>
+        ) : (
+          <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
+        )
+      }
+    </ExpandablePane>
   );
 };
 
 const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
   const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
-  const [side, setSide] = React.useState<"client" | "server">("server");
   const [serverCleared, setServerCleared] = React.useState(false);
 
   React.useEffect(() => {
@@ -787,46 +700,18 @@ const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | un
     return monitor._subscribe(() => setEffects(monitor._getEffects()));
   }, [monitor]);
 
-  const hasServer = serverEffects != null;
-
-  if (!hasServer) {
-    if (!monitor) {
-      return (
-        <Alert className="m-3! p-3!">
-          <AlertDescription className="text-xs">
-            No saga monitor connected.
-            <span className="block font-mono mt-1">{"sagaMonitor={sentinelMonitor}"}</span>
-          </AlertDescription>
-        </Alert>
-      );
-    }
-    return <SagaPane effects={effects} onClear={() => monitor._clear()} />;
-  }
-
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="shrink-0 flex justify-center pt-2 pb-1">
-        <ToggleGroup
-          type="single"
-          value={side}
-          onValueChange={(v) => v && setSide(v as "client" | "server")}
-        >
-          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
-          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-      {side === "client" ? (
-        monitor ? (
-          <SagaPane effects={effects} onClear={() => monitor._clear()} />
-        ) : (
-          <Alert className="m-3! p-3!">
-            <AlertDescription className="text-xs">No client monitor connected.</AlertDescription>
-          </Alert>
-        )
-      ) : (
-        <SagaPane effects={serverCleared ? [] : serverEffects} onClear={() => setServerCleared(true)} />
-      )}
-    </div>
+    <ClientServerSection
+      hasServer={serverEffects != null}
+      clientPane={monitor ? <SagaPane effects={effects} onClear={() => monitor._clear()} /> : null}
+      serverPane={<SagaPane effects={serverCleared ? [] : serverEffects} onClear={() => setServerCleared(true)} />}
+      noClientMessage={
+        <>
+          No saga monitor connected.
+          <span className="block font-mono mt-1">{"sagaMonitor={sentinelMonitor}"}</span>
+        </>
+      }
+    />
   );
 };
 

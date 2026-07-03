@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, Copy, Check, Link2 } from "lucide-react";
+import { Clock, Link2 } from "lucide-react";
 import {
   Accordion,
   AccordionItem,
@@ -10,6 +10,7 @@ import { Badge } from "../components/Badge";
 import { Alert, AlertDescription } from "../components/Alert";
 import { ToggleGroup, ToggleGroupItem } from "../components/ToggleGroup";
 import { JsonNode } from "./JsonNode";
+import { CopyButton } from "./CopyButton";
 import { cn } from "../../utils/cn";
 import { type EffectRecord } from "../../saga/createSentinelSagaMonitor";
 import { extractApiCalls, buildCurl, type ApiCall } from "../../utils/apiCalls";
@@ -37,32 +38,6 @@ const displayPath = (url: string): string => {
   }
 };
 
-const CurlButton = ({ call }: { call: ApiCall }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const copy = () => {
-    try {
-      void navigator.clipboard?.writeText(buildCurl(call));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard unavailable */
-    }
-  };
-
-  return (
-    <button
-      onClick={copy}
-      className={cn(
-        "shrink-0 inline-flex items-center gap-1 text-xs transition-colors cursor-pointer",
-        copied ? "text-emerald-400" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {copied ? <Check size={11} /> : <Copy size={11} />}
-      {copied ? "Copied" : "Copy as cURL"}
-    </button>
-  );
-};
 
 export const ApiLayerViewer = ({
   effects,
@@ -238,7 +213,7 @@ const ApiCallItem = ({ call, showOrigin = false }: { call: ApiCall; showOrigin?:
       <div className="space-y-1.5">
         <div className="flex items-start justify-between gap-2 px-1">
           <span className="text-muted-foreground break-all min-w-0">{call.url}</span>
-          <CurlButton call={call} />
+          <CopyButton getText={() => buildCurl(call)} label="Copy as cURL" />
         </div>
 
         {call.requestHeaders && Object.keys(call.requestHeaders).length > 0 && (
