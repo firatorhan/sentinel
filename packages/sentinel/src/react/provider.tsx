@@ -28,6 +28,8 @@ type DialogMeta = {
   md?: string;
   componentProps?: Record<string, any>;
   externalLinks?: ResolvedExternalLink[];
+  sagaEffects?: EffectRecord[];
+  serverSagaEffects?: EffectRecord[];
 };
 
 export type ReduxStore = {
@@ -152,16 +154,14 @@ export const SentinelProvider = ({
       renderCount?: number,
       propHistory?: Record<string, any>[],
     ) => {
-      const sagaEffects = [
-        ...(sagaMonitor?._getEffects() ?? []),
-        ...(serverSagaEffects ?? []),
-      ];
+      const clientSagaEffects = sagaMonitor?._getEffects() ?? [];
+      const sagaEffects = [...clientSagaEffects, ...(serverSagaEffects ?? [])];
       const resolvedLinks = externalLinks
         ?.filter((link) => componentName && componentProps && link.match(componentName, componentProps))
         .map((link) => ({ label: link.label, url: link.url(componentProps ?? {}, sagaEffects) }))
         .filter((link) => link.url);
       setOpenDialogId(id);
-      setDialogMeta({ componentName, sourceFile, renderCount, propHistory, md, componentProps, externalLinks: resolvedLinks });
+      setDialogMeta({ componentName, sourceFile, renderCount, propHistory, md, componentProps, externalLinks: resolvedLinks, sagaEffects: clientSagaEffects, serverSagaEffects });
     },
     [externalLinks, sagaMonitor, serverSagaEffects],
   );
