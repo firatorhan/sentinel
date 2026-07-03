@@ -5,4 +5,6 @@ export { useSentinel, useSentinelInteraction, useSentinelDialog } from "./provid
 export type { ExternalLink } from "./provider";
 export { voltranExternalLink } from "./voltranExternalLink";
 export { createSentinelSagaMonitor } from "../saga/createSentinelSagaMonitor";
-export type { SentinelSagaMonitor, EffectRecord, EffectStatus } from "../saga/createSentinelSagaMonitor";
+export type { SentinelSagaMonitor, EffectRecord, EffectStatus, EffectType } from "../saga/createSentinelSagaMonitor";
+export { createSentinelReduxMiddleware } from "../redux/createSentinelReduxMiddleware";
+export type { SentinelReduxMiddleware, ActionRecord, DiffEntry, DiffType } from "../redux/createSentinelReduxMiddleware";

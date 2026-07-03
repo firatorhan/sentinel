@@ -69,6 +69,24 @@ export function transformCode(code: string, id: string, isInInclude: boolean, ad
         const info = componentsToWrap.get(name)!;
         const line = pathNode.node.loc?.start.line ?? 1;
         wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
+      } else if (t.isCallExpression(parent)) {
+        const callee = parent.callee;
+        const isKnownHoc =
+          (t.isIdentifier(callee) && (callee.name === 'memo' || callee.name === 'forwardRef')) ||
+          (t.isMemberExpression(callee) && t.isIdentifier(callee.property) &&
+            (callee.property.name === 'memo' || callee.property.name === 'forwardRef'));
+        if (isKnownHoc) {
+          const argIndex = parent.arguments.indexOf(pathNode.node);
+          if (argIndex === 0) {
+            const grandParent = pathNode.parentPath.parentPath?.node;
+            if (t.isVariableDeclarator(grandParent) && t.isIdentifier(grandParent.id) && componentsToWrap.has(grandParent.id.name)) {
+              const name = grandParent.id.name;
+              const info = componentsToWrap.get(name)!;
+              const line = pathNode.node.loc?.start.line ?? 1;
+              wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
+            }
+          }
+        }
       }
     },
     FunctionExpression(pathNode: NodePath<t.FunctionExpression>) {
@@ -78,6 +96,24 @@ export function transformCode(code: string, id: string, isInInclude: boolean, ad
         const info = componentsToWrap.get(name)!;
         const line = pathNode.node.loc?.start.line ?? 1;
         wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
+      } else if (t.isCallExpression(parent)) {
+        const callee = parent.callee;
+        const isKnownHoc =
+          (t.isIdentifier(callee) && (callee.name === 'memo' || callee.name === 'forwardRef')) ||
+          (t.isMemberExpression(callee) && t.isIdentifier(callee.property) &&
+            (callee.property.name === 'memo' || callee.property.name === 'forwardRef'));
+        if (isKnownHoc) {
+          const argIndex = parent.arguments.indexOf(pathNode.node);
+          if (argIndex === 0) {
+            const grandParent = pathNode.parentPath.parentPath?.node;
+            if (t.isVariableDeclarator(grandParent) && t.isIdentifier(grandParent.id) && componentsToWrap.has(grandParent.id.name)) {
+              const name = grandParent.id.name;
+              const info = componentsToWrap.get(name)!;
+              const line = pathNode.node.loc?.start.line ?? 1;
+              wrapFunctionBody(pathNode, name, `${id}:${line}`, info.mdIdentifier);
+            }
+          }
+        }
       }
     },
     FunctionDeclaration(pathNode: NodePath<t.FunctionDeclaration>) {

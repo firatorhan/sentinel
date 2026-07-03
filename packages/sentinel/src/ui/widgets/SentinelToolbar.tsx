@@ -9,10 +9,12 @@ import { Input } from "../components/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/Tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/Dialog";
 import { JsonNode } from "./JsonNode";
+import { Badge } from "../components/Badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/Accordion";
 import { useSentinelInteraction } from "../../react";
 import { type ReduxStore } from "../../react/provider";
-import { type SentinelSagaMonitor, type EffectRecord } from "../../saga/createSentinelSagaMonitor";
+import { type SentinelSagaMonitor, type EffectRecord, type EffectType } from "../../saga/createSentinelSagaMonitor";
+import { type SentinelReduxMiddleware, type ActionRecord, type DiffType } from "../../redux/createSentinelReduxMiddleware";
 import { cn } from "../../utils/cn";
 import { getPreview, filterState, filteredEntries } from "../../utils/stateSearch";
 
@@ -131,7 +133,198 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
   );
 };
 
-const ReduxTab = ({ store, serverState }: { store: ReduxStore | undefined; serverState?: unknown }) => {
+const DIFF_ICON: Record<DiffType, string> = { added: "+", removed: "−", changed: "~" };
+const DIFF_COLOR: Record<DiffType, string> = {
+  added: "text-emerald-400",
+  removed: "text-red-400",
+  changed: "text-amber-400",
+};
+
+function timeAgo(ts: number): string {
+  const d = Date.now() - ts;
+  if (d < 1000) return "just now";
+  if (d < 60000) return `${Math.floor(d / 1000)}s ago`;
+  return `${Math.floor(d / 60000)}m ago`;
+}
+
+const actionMatchesSearch = (record: ActionRecord, q: string): boolean => {
+  if (record.action.type.toLowerCase().includes(q)) return true;
+  if (record.diff.some(e => e.path.toLowerCase().includes(q))) return true;
+  return false;
+};
+
+const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?: string }) => {
+  const q = search.toLowerCase();
+  const filtered = q ? records.filter(r => actionMatchesSearch(r, q)) : records;
+
+  if (records.length === 0) {
+    return <div className="py-4 text-center text-xs text-muted-foreground">No actions dispatched yet.</div>;
+  }
+
+  if (filtered.length === 0) {
+    return <span className="text-muted-foreground italic text-xs px-1">No results for "{search}"</span>;
+  }
+
+  return (
+    <Accordion type="multiple" value={q ? filtered.map(r => String(r.id)) : undefined} className="w-full font-mono text-xs">
+      {filtered.map(record => (
+        <AccordionItem key={record.id} value={String(record.id)}>
+          <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+            <span className="flex-1 truncate text-left text-foreground">{record.action.type}</span>
+            <span className="shrink-0 text-muted-foreground mr-2 text-[10px]">{timeAgo(record.timestamp)}</span>
+            {record.diff.length > 0 && (
+              <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-mono leading-4 rounded text-amber-400 border-amber-400/50">
+                {record.diff.length}
+              </Badge>
+            )}
+          </AccordionTrigger>
+          <AccordionContent className="pb-2! pt-0 px-2">
+            {record.diff.length === 0 ? (
+              <span className="text-muted-foreground italic text-xs">No state changes</span>
+            ) : (
+              <div className="space-y-1.5">
+                {record.diff.map((entry, i) => (
+                  <div key={i} className="bg-muted p-2! rounded overflow-x-hidden">
+                    <div className="flex items-center gap-1.5 mb-1!">
+                      <span className={cn("font-bold text-xs", DIFF_COLOR[entry.type])}>{DIFF_ICON[entry.type]}</span>
+                      <span className="text-foreground text-xs">{entry.path}</span>
+                    </div>
+                    {entry.type === "changed" && (
+                      <div className="space-y-1">
+                        <div className="opacity-60 line-through">
+                          <JsonNode value={entry.prev} collapseFromDepth={1} />
+                        </div>
+                        <div className={DIFF_COLOR.added}>
+                          <JsonNode value={entry.next} collapseFromDepth={1} />
+                        </div>
+                      </div>
+                    )}
+                    {entry.type === "added" && (
+                      <div className={DIFF_COLOR.added}>
+                        <JsonNode value={entry.next} collapseFromDepth={1} />
+                      </div>
+                    )}
+                    {entry.type === "removed" && (
+                      <div className={cn("opacity-60 line-through", DIFF_COLOR.removed)}>
+                        <JsonNode value={entry.prev} collapseFromDepth={1} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+};
+
+const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?: () => void }) => {
+  const [search, setSearch] = React.useState("");
+  const [expanded, setExpanded] = React.useState(false);
+
+  return (
+    <>
+      <div className="py-3! space-y-2!">
+        <div className="flex items-center gap-1.5">
+          <Input
+            placeholder="Search actions…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-7 text-xs"
+          />
+          {onClear && records.length > 0 && (
+            <button
+              onClick={onClear}
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          )}
+          <button
+            onClick={() => setExpanded(true)}
+            title="Expand"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Maximize2 size={14} />
+          </button>
+        </div>
+        <div className="max-h-60 overflow-y-auto">
+          <ActionList records={records} search={search} />
+        </div>
+      </div>
+
+      <Dialog open={expanded} onOpenChange={setExpanded}>
+        <DialogContent className="flex flex-col overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Action Log</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Search actions…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 text-sm shrink-0"
+          />
+          <div className="overflow-y-auto min-h-0 flex-1">
+            <ActionList records={records} search={search} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+const ActionLogTab = ({
+  middleware,
+  serverActionLog,
+}: {
+  middleware?: SentinelReduxMiddleware;
+  serverActionLog?: ActionRecord[];
+}) => {
+  const [records, setRecords] = React.useState<ActionRecord[]>(() => middleware?._getRecords() ?? []);
+
+  React.useEffect(() => {
+    if (!middleware) return;
+    setRecords(middleware._getRecords());
+    return middleware._subscribe(() => setRecords([...middleware._getRecords()]));
+  }, [middleware]);
+
+  const hasServer = serverActionLog != null;
+
+  if (!hasServer) {
+    if (!middleware) {
+      return (
+        <div className="py-6 text-center text-sm text-muted-foreground">
+          No middleware connected.
+          <span className="block mt-1 text-xs font-mono">createSentinelReduxMiddleware()</span>
+        </div>
+      );
+    }
+    return <ActionLogPane records={records} onClear={() => middleware._clear()} />;
+  }
+
+  return (
+    <Tabs defaultValue="server">
+      <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
+        <TabsTrigger value="client" className="text-xs">Client</TabsTrigger>
+        <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
+      </TabsList>
+      <TabsContent value="client" className="mt-0">
+        {middleware ? (
+          <ActionLogPane records={records} onClear={() => middleware._clear()} />
+        ) : (
+          <div className="py-4 text-center text-xs text-muted-foreground">No client middleware connected.</div>
+        )}
+      </TabsContent>
+      <TabsContent value="server" className="mt-0">
+        <ActionLogPane records={serverActionLog} />
+      </TabsContent>
+    </Tabs>
+  );
+};
+
+const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefined; serverState?: unknown }) => {
   const [clientState, setClientState] = React.useState<unknown>(store?.getState());
 
   React.useEffect(() => {
@@ -147,9 +340,7 @@ const ReduxTab = ({ store, serverState }: { store: ReduxStore | undefined; serve
       return (
         <div className="py-6 text-center text-sm text-muted-foreground">
           No store connected.
-          <span className="block mt-1 text-xs font-mono">
-            {"<SentinelProvider store={store}>"}
-          </span>
+          <span className="block mt-1 text-xs font-mono">{"<SentinelProvider store={store}>"}</span>
         </div>
       );
     }
@@ -163,12 +354,8 @@ const ReduxTab = ({ store, serverState }: { store: ReduxStore | undefined; serve
         <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
       </TabsList>
       <TabsContent value="client" className="mt-0">
-        {store ? (
-          <ReduxStatePane state={clientState} />
-        ) : (
-          <div className="py-4 text-center text-xs text-muted-foreground">
-            No client store connected.
-          </div>
+        {store ? <ReduxStatePane state={clientState} /> : (
+          <div className="py-4 text-center text-xs text-muted-foreground">No client store connected.</div>
         )}
       </TabsContent>
       <TabsContent value="server" className="mt-0">
@@ -177,6 +364,26 @@ const ReduxTab = ({ store, serverState }: { store: ReduxStore | undefined; serve
     </Tabs>
   );
 };
+
+const ReduxTab = ({ store, serverState, reduxMiddleware, serverActionLog }: {
+  store: ReduxStore | undefined;
+  serverState?: unknown;
+  reduxMiddleware?: SentinelReduxMiddleware;
+  serverActionLog?: ActionRecord[];
+}) => (
+  <Tabs defaultValue="state">
+    <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
+      <TabsTrigger value="state" className="text-xs">State</TabsTrigger>
+      <TabsTrigger value="log" className="text-xs">Log</TabsTrigger>
+    </TabsList>
+    <TabsContent value="state" className="mt-0">
+      <ReduxStateSection store={store} serverState={serverState} />
+    </TabsContent>
+    <TabsContent value="log" className="mt-0">
+      <ActionLogTab middleware={reduxMiddleware} serverActionLog={serverActionLog} />
+    </TabsContent>
+  </Tabs>
+);
 
 const STATUS_ICON: Record<EffectRecord["status"], string> = {
   pending: "⏳",
@@ -206,21 +413,74 @@ const safeFilterState = (value: unknown, q: string): boolean => {
 
 const effectMatchesSearch = (effect: EffectRecord, q: string): boolean => {
   if (effect.fnName.toLowerCase().includes(q)) return true;
+  if (effect.type?.toLowerCase().includes(q)) return true;
   if (safeFilterState(effect.args, q)) return true;
   if (effect.result !== undefined && safeFilterState(effect.result, q)) return true;
   if (effect.error !== undefined && safeFilterState(effect.error, q)) return true;
   return false;
 };
 
-const EffectList = ({ effects, search = "" }: { effects: EffectRecord[]; search?: string }) => {
+type TreeNode = { effect: EffectRecord; children: TreeNode[] };
+
+function buildTree(effects: EffectRecord[]): TreeNode[] {
+  const ordered = [...effects].reverse();
+  const byId = new Map<number, TreeNode>();
+  for (const e of ordered) byId.set(e.id, { effect: e, children: [] });
+  const roots: TreeNode[] = [];
+  for (const node of byId.values()) {
+    const parent = byId.get(node.effect.parentId);
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+
+function flattenDFS(nodes: TreeNode[], depth = 0): Array<{ effect: EffectRecord; depth: number }> {
+  return nodes.flatMap(n => [{ effect: n.effect, depth }, ...flattenDFS(n.children, depth + 1)]);
+}
+
+function getVisibleIds(effects: EffectRecord[], q: string): Set<number> {
+  const byId = new Map(effects.map(e => [e.id, e]));
+  const matched = new Set(effects.filter(e => effectMatchesSearch(e, q)).map(e => e.id));
+  const visible = new Set(matched);
+  for (const id of matched) {
+    let cur = byId.get(id);
+    while (cur) {
+      const parent = byId.get(cur.parentId);
+      if (!parent) break;
+      visible.add(parent.id);
+      cur = parent;
+    }
+  }
+  return visible;
+}
+
+const TYPE_BADGE: Partial<Record<EffectType, { label: string; className: string }>> = {
+  FORK:  { label: "fork",  className: "text-blue-400 border-blue-400/50" },
+  SPAWN: { label: "spawn", className: "text-purple-400 border-purple-400/50" },
+  TAKE:  { label: "take",  className: "text-amber-400 border-amber-400/50" },
+  PUT:   { label: "put",   className: "text-cyan-400 border-cyan-400/50" },
+};
+
+const EffectTree = ({ effects, search = "" }: { effects: EffectRecord[]; search?: string }) => {
   const q = search.toLowerCase();
 
-  const filtered = q ? effects.filter((e) => effectMatchesSearch(e, q)) : effects;
+  const roots = React.useMemo(() => buildTree(effects), [effects]);
+  const allFlat = React.useMemo(() => flattenDFS(roots), [roots]);
+
+  const visibleIds = React.useMemo(
+    () => (q ? getVisibleIds(effects, q) : null),
+    [effects, q],
+  );
+
+  const displayed = visibleIds ? allFlat.filter(({ effect }) => visibleIds.has(effect.id)) : allFlat;
 
   const [openItems, setOpenItems] = React.useState<string[]>([]);
 
   React.useEffect(() => {
-    setOpenItems(q ? filtered.map((e) => String(e.id)) : []);
+    if (!q) { setOpenItems([]); return; }
+    const matchedIds = effects.filter(e => effectMatchesSearch(e, q)).map(e => String(e.id));
+    setOpenItems(matchedIds);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
@@ -232,7 +492,7 @@ const EffectList = ({ effects, search = "" }: { effects: EffectRecord[]; search?
     );
   }
 
-  if (filtered.length === 0) {
+  if (displayed.length === 0) {
     return (
       <span className="text-muted-foreground italic text-xs px-1">No results for "{search}"</span>
     );
@@ -240,28 +500,35 @@ const EffectList = ({ effects, search = "" }: { effects: EffectRecord[]; search?
 
   return (
     <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full font-mono text-xs">
-      {filtered.map((effect) => {
+      {displayed.map(({ effect, depth }) => {
         const safeDisplay = (val: unknown) => { try { return filterState(val, q); } catch { return undefined; } };
         const displayArgs = q ? (safeDisplay(effect.args) ?? effect.args) : effect.args;
         const displayResult = q && effect.result !== undefined ? (safeDisplay(effect.result) ?? effect.result) : effect.result;
         const displayError = q && effect.error !== undefined ? (safeDisplay(effect.error) ?? effect.error) : effect.error;
+        const typeBadge = TYPE_BADGE[effect.type];
 
         return (
           <AccordionItem key={effect.id} value={String(effect.id)}>
             <AccordionTrigger
               className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal"
+              style={{ paddingLeft: `${depth * 12 + 8}px` }}
             >
               <span className={cn("shrink-0 w-4 text-center", STATUS_COLOR[effect.status])}>
                 {STATUS_ICON[effect.status]}
               </span>
+              {typeBadge && (
+                <Badge variant="outline" className={cn("shrink-0 ml-1 px-1.5 py-0 text-[10px] font-mono leading-4 rounded", typeBadge.className)}>
+                  {typeBadge.label}
+                </Badge>
+              )}
               <span className="flex-1 truncate text-left text-foreground mx-2">{effect.fnName}</span>
               {effect.duration !== undefined && (
                 <span className="shrink-0 text-muted-foreground mr-1">{effect.duration}ms</span>
               )}
             </AccordionTrigger>
 
-            <AccordionContent className="pb-2! pt-0 px-2">
-              <div className="space-y-1.5">
+            <AccordionContent className="pb-2! pt-0" style={{ paddingLeft: `${depth * 12 + 8}px` }}>
+              <div className="space-y-1.5 pr-2">
                 {(effect.args?.length ?? 0) > 0 && (
                   <div className="bg-muted p-2! rounded overflow-x-hidden">
                     <div className="text-muted-foreground mb-1!">args</div>
@@ -324,7 +591,7 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
           </button>
         </div>
         <div className="max-h-60 overflow-y-auto">
-          <EffectList effects={effects} search={search} />
+          <EffectTree effects={effects} search={search} />
         </div>
       </div>
 
@@ -340,7 +607,7 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             className="h-8 text-sm shrink-0"
           />
           <div className="overflow-y-auto min-h-0 flex-1">
-            <EffectList effects={effects} search={search} />
+            <EffectTree effects={effects} search={search} />
           </div>
         </DialogContent>
       </Dialog>
@@ -399,10 +666,14 @@ export const SentinelToolbar = ({
   sagaMonitor,
   serverState,
   serverSagaEffects,
+  reduxMiddleware,
+  serverActionLog,
 }: {
   sagaMonitor?: SentinelSagaMonitor;
   serverState?: unknown;
   serverSagaEffects?: EffectRecord[];
+  reduxMiddleware?: SentinelReduxMiddleware;
+  serverActionLog?: ActionRecord[];
 }) => {
   const {
     isActive, setIsActive,
@@ -495,7 +766,7 @@ export const SentinelToolbar = ({
               </TabsContent>
 
               <TabsContent value="redux" className="mt-0">
-                <ReduxTab store={reduxStore} serverState={serverState} />
+                <ReduxTab store={reduxStore} serverState={serverState} reduxMiddleware={reduxMiddleware} serverActionLog={serverActionLog} />
               </TabsContent>
 
               <TabsContent value="saga" className="mt-0">
