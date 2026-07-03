@@ -160,9 +160,71 @@ const actionMatchesSearch = (record: ActionRecord, q: string): boolean => {
   return false;
 };
 
+const isSystemAction = (type: string): boolean =>
+  type.startsWith("@@") || type.startsWith("persist/");
+
+type ActionGroup = { key: string; type: string; records: ActionRecord[] };
+
+// Records are newest-first; consecutive repeats collapse into one row
+const groupConsecutive = (records: ActionRecord[]): ActionGroup[] => {
+  const groups: ActionGroup[] = [];
+  for (const record of records) {
+    const last = groups[groups.length - 1];
+    if (last && last.type === record.action.type) last.records.push(record);
+    else groups.push({ key: String(record.id), type: record.action.type, records: [record] });
+  }
+  return groups;
+};
+
+const DiffEntries = ({ diff }: { diff: ActionRecord["diff"] }) =>
+  diff.length === 0 ? (
+    <span className="text-muted-foreground italic text-xs">No state changes</span>
+  ) : (
+    <div className="space-y-1.5">
+      {diff.map((entry, i) => (
+        <div key={i} className="bg-muted p-2! rounded-md overflow-x-hidden">
+          <div className="flex items-start gap-1.5 mb-1!">
+            <span className={cn("font-bold text-xs shrink-0 mt-px", DIFF_COLOR[entry.type])}>{DIFF_ICON[entry.type]}</span>
+            <span className="text-foreground text-xs break-all">{entry.path}</span>
+          </div>
+          {entry.type === "changed" && (
+            <div className="space-y-1">
+              <div className="opacity-60 line-through">
+                <JsonNode value={entry.prev} collapseFromDepth={1} />
+              </div>
+              <div className={DIFF_COLOR.added}>
+                <JsonNode value={entry.next} collapseFromDepth={1} />
+              </div>
+            </div>
+          )}
+          {entry.type === "added" && (
+            <div className={DIFF_COLOR.added}>
+              <JsonNode value={entry.next} collapseFromDepth={1} />
+            </div>
+          )}
+          {entry.type === "removed" && (
+            <div className={cn("opacity-60 line-through", DIFF_COLOR.removed)}>
+              <JsonNode value={entry.prev} collapseFromDepth={1} />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+const MAX_GROUP_OCCURRENCES = 10;
+
 const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?: string }) => {
   const q = search.toLowerCase();
   const filtered = q ? records.filter(r => actionMatchesSearch(r, q)) : records;
+  const groups = React.useMemo(() => groupConsecutive(filtered), [filtered]);
+  const [openItems, setOpenItems] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (!q) { setOpenItems([]); return; }
+    setOpenItems(groups.map(g => g.key));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   if (records.length === 0) {
     return <div className="py-4 text-center text-xs text-muted-foreground">No actions dispatched yet.</div>;
@@ -173,56 +235,48 @@ const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?
   }
 
   return (
-    <Accordion type="multiple" value={q ? filtered.map(r => String(r.id)) : undefined} className="w-full font-mono text-xs">
-      {filtered.map(record => (
-        <AccordionItem key={record.id} value={String(record.id)}>
-          <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
-            <span className="flex-1 min-w-0 line-clamp-1 break-all text-left text-foreground">{record.action.type}</span>
-            <span className="shrink-0 text-muted-foreground mr-2 text-[10px]">{timeAgo(record.timestamp)}</span>
-            {record.diff.length > 0 && (
-              <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-mono leading-4 rounded text-amber-400 border-amber-400/50">
-                {record.diff.length}
-              </Badge>
-            )}
-          </AccordionTrigger>
-          <AccordionContent className="pb-2! pt-0 px-1">
-            {record.diff.length === 0 ? (
-              <span className="text-muted-foreground italic text-xs">No state changes</span>
-            ) : (
-              <div className="space-y-1.5">
-                {record.diff.map((entry, i) => (
-                  <div key={i} className="bg-muted p-2! rounded-md overflow-x-hidden">
-                    <div className="flex items-start gap-1.5 mb-1!">
-                      <span className={cn("font-bold text-xs shrink-0 mt-px", DIFF_COLOR[entry.type])}>{DIFF_ICON[entry.type]}</span>
-                      <span className="text-foreground text-xs break-all">{entry.path}</span>
-                    </div>
-                    {entry.type === "changed" && (
-                      <div className="space-y-1">
-                        <div className="opacity-60 line-through">
-                          <JsonNode value={entry.prev} collapseFromDepth={1} />
-                        </div>
-                        <div className={DIFF_COLOR.added}>
-                          <JsonNode value={entry.next} collapseFromDepth={1} />
-                        </div>
-                      </div>
+    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full font-mono text-xs">
+      {groups.map(group => {
+        const latest = group.records[0];
+        const totalDiff = group.records.reduce((sum, r) => sum + r.diff.length, 0);
+        const shown = group.records.slice(0, MAX_GROUP_OCCURRENCES);
+
+        return (
+          <AccordionItem key={group.key} value={group.key}>
+            <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
+              <span className="flex-1 min-w-0 line-clamp-1 break-all text-left text-foreground">{group.type}</span>
+              {group.records.length > 1 && (
+                <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-mono leading-4 rounded text-muted-foreground mr-1">
+                  ×{group.records.length}
+                </Badge>
+              )}
+              <span className="shrink-0 text-muted-foreground mr-2 text-[10px]">{timeAgo(latest.timestamp)}</span>
+              {totalDiff > 0 && (
+                <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-mono leading-4 rounded text-amber-400 border-amber-400/50">
+                  {totalDiff}
+                </Badge>
+              )}
+            </AccordionTrigger>
+            <AccordionContent className="pb-2! pt-0 px-1">
+              <div className="space-y-2">
+                {shown.map(record => (
+                  <div key={record.id}>
+                    {group.records.length > 1 && (
+                      <div className="text-[10px] text-muted-foreground mb-1!">{timeAgo(record.timestamp)}</div>
                     )}
-                    {entry.type === "added" && (
-                      <div className={DIFF_COLOR.added}>
-                        <JsonNode value={entry.next} collapseFromDepth={1} />
-                      </div>
-                    )}
-                    {entry.type === "removed" && (
-                      <div className={cn("opacity-60 line-through", DIFF_COLOR.removed)}>
-                        <JsonNode value={entry.prev} collapseFromDepth={1} />
-                      </div>
-                    )}
+                    <DiffEntries diff={record.diff} />
                   </div>
                 ))}
+                {group.records.length > shown.length && (
+                  <div className="text-[10px] text-muted-foreground italic">
+                    +{group.records.length - shown.length} older occurrences
+                  </div>
+                )}
               </div>
-            )}
-          </AccordionContent>
-        </AccordionItem>
-      ))}
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
     </Accordion>
   );
 };
@@ -230,6 +284,29 @@ const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?
 const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?: () => void }) => {
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
+  const [showSystem, setShowSystem] = React.useState(false);
+
+  const systemCount = React.useMemo(
+    () => records.filter(r => isSystemAction(r.action.type)).length,
+    [records],
+  );
+  const visibleRecords = React.useMemo(
+    () => (showSystem ? records : records.filter(r => !isSystemAction(r.action.type))),
+    [records, showSystem],
+  );
+
+  const systemToggle = systemCount > 0 && (
+    <button
+      onClick={() => setShowSystem(s => !s)}
+      title="Toggle framework actions (@@…, persist/…)"
+      className={cn(
+        "shrink-0 text-xs transition-colors",
+        showSystem ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      System ({systemCount})
+    </button>
+  );
 
   return (
     <>
@@ -241,6 +318,7 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
             onChange={(e) => setSearch(e.target.value)}
             className="h-7 text-xs"
           />
+          {systemToggle}
           {onClear && records.length > 0 && (
             <button
               onClick={onClear}
@@ -259,7 +337,7 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="pr-3">
-            <ActionList records={records} search={search} />
+            <ActionList records={visibleRecords} search={search} />
           </div>
         </ScrollArea>
       </div>
@@ -269,15 +347,18 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
           <DialogHeader>
             <DialogTitle>Action Log</DialogTitle>
           </DialogHeader>
-          <Input
-            placeholder="Search actions…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 text-sm shrink-0"
-          />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Input
+              placeholder="Search actions…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm"
+            />
+            {systemToggle}
+          </div>
           <ScrollArea className="flex-1 min-h-0">
             <div className="pr-3">
-              <ActionList records={records} search={search} />
+              <ActionList records={visibleRecords} search={search} />
             </div>
           </ScrollArea>
         </DialogContent>
@@ -295,6 +376,7 @@ const ActionLogTab = ({
 }) => {
   const [records, setRecords] = React.useState<ActionRecord[]>(() => middleware?._getRecords() ?? []);
   const [side, setSide] = React.useState<"client" | "server">("server");
+  const [serverCleared, setServerCleared] = React.useState(false);
 
   React.useEffect(() => {
     if (!middleware) return;
@@ -339,7 +421,7 @@ const ActionLogTab = ({
           </Alert>
         )
       ) : (
-        <ActionLogPane records={serverActionLog} />
+        <ActionLogPane records={serverCleared ? [] : serverActionLog} onClear={() => setServerCleared(true)} />
       )}
     </div>
   );
@@ -470,6 +552,7 @@ function getVisibleIds(effects: EffectRecord[], q: string): Set<number> {
 }
 
 const TYPE_BADGE: Partial<Record<EffectType, { label: string; className: string }>> = {
+  CALL:  { label: "call",  className: "text-emerald-400 border-emerald-400/50" },
   FORK:  { label: "fork",  className: "text-blue-400 border-blue-400/50" },
   SPAWN: { label: "spawn", className: "text-purple-400 border-purple-400/50" },
   TAKE:  { label: "take",  className: "text-amber-400 border-amber-400/50" },
@@ -573,10 +656,56 @@ const EffectTree = ({ effects, search = "" }: { effects: EffectRecord[]; search?
   );
 };
 
+const SagaTypeFilters = ({
+  effects,
+  activeTypes,
+  onChange,
+}: {
+  effects: EffectRecord[];
+  activeTypes: EffectType[];
+  onChange: (types: EffectType[]) => void;
+}) => {
+  const availableTypes = React.useMemo(
+    () => [...new Set(effects.map((e) => e.type))].filter(Boolean) as EffectType[],
+    [effects],
+  );
+
+  if (availableTypes.length === 0) return null;
+
+  return (
+    <ToggleGroup
+      type="multiple"
+      value={activeTypes}
+      onValueChange={(v) => onChange(v as EffectType[])}
+      className="shrink-0 justify-start flex-wrap gap-1"
+    >
+      {availableTypes.map((type) => {
+        const badge = TYPE_BADGE[type];
+        return (
+          <ToggleGroupItem
+            key={type}
+            value={type}
+            className={cn("h-5 px-1.5 min-w-0 text-[10px] font-mono", badge?.className)}
+          >
+            {badge?.label ?? type.toLowerCase()}
+          </ToggleGroupItem>
+        );
+      })}
+    </ToggleGroup>
+  );
+};
+
 const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; onClear?: () => void }) => {
   const effects = rawEffects ?? [];
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
+  // CALL-only by default: TAKE/FORK/PUT rows are mostly saga plumbing noise
+  const [activeTypes, setActiveTypes] = React.useState<EffectType[]>(["CALL"]);
+
+  const filteredEffects = React.useMemo(
+    () => (activeTypes.length === 0 ? effects : effects.filter((e) => activeTypes.includes(e.type))),
+    [effects, activeTypes],
+  );
 
   return (
     <>
@@ -604,9 +733,16 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             <Maximize2 size={14} />
           </button>
         </div>
+        <SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />
         <ScrollArea className="flex-1 min-h-0">
           <div className="pr-3">
-            <EffectTree effects={effects} search={search} />
+            {effects.length > 0 && filteredEffects.length === 0 ? (
+              <span className="text-muted-foreground italic text-xs px-1">
+                No effects match the type filter.
+              </span>
+            ) : (
+              <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
+            )}
           </div>
         </ScrollArea>
       </div>
@@ -622,9 +758,16 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-sm shrink-0"
           />
+          <SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />
           <ScrollArea className="flex-1 min-h-0">
             <div className="pr-3">
-              <EffectTree effects={effects} search={search} />
+              {effects.length > 0 && filteredEffects.length === 0 ? (
+                <span className="text-muted-foreground italic text-xs px-1">
+                  No effects match the type filter.
+                </span>
+              ) : (
+                <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
+              )}
             </div>
           </ScrollArea>
         </DialogContent>
@@ -636,6 +779,7 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
 const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
   const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
   const [side, setSide] = React.useState<"client" | "server">("server");
+  const [serverCleared, setServerCleared] = React.useState(false);
 
   React.useEffect(() => {
     if (!monitor) return;
@@ -680,7 +824,7 @@ const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | un
           </Alert>
         )
       ) : (
-        <SagaPane effects={serverEffects} />
+        <SagaPane effects={serverCleared ? [] : serverEffects} onClear={() => setServerCleared(true)} />
       )}
     </div>
   );
@@ -706,17 +850,22 @@ export const SentinelToolbar = ({
     reduxStore,
   } = useSentinelInteraction();
 
-  const [sagaEffectCount, setSagaEffectCount] = React.useState(() => sagaMonitor?._getEffects().length ?? 0);
+  // Badges mirror the default views: CALL effects only, system actions excluded
+  const countCalls = () => sagaMonitor?._getEffects().filter(e => e.type === "CALL").length ?? 0;
+  const countLog = () =>
+    reduxMiddleware?._getRecords().filter(r => !isSystemAction(r.action.type)).length ?? 0;
+
+  const [sagaEffectCount, setSagaEffectCount] = React.useState(countCalls);
   const [sagaRejectedCount, setSagaRejectedCount] = React.useState(
     () => sagaMonitor?._getEffects().filter(e => e.status === "rejected").length ?? 0,
   );
-  const [logCount, setLogCount] = React.useState(() => reduxMiddleware?._getRecords().length ?? 0);
+  const [logCount, setLogCount] = React.useState(countLog);
 
   React.useEffect(() => {
     if (!sagaMonitor) return;
     const update = () => {
       const effects = sagaMonitor._getEffects();
-      setSagaEffectCount(effects.length);
+      setSagaEffectCount(effects.filter(e => e.type === "CALL").length);
       setSagaRejectedCount(effects.filter(e => e.status === "rejected").length);
     };
     update();
@@ -725,9 +874,10 @@ export const SentinelToolbar = ({
 
   React.useEffect(() => {
     if (!reduxMiddleware) return;
-    const update = () => setLogCount(reduxMiddleware._getRecords().length);
+    const update = () => setLogCount(countLog());
     update();
     return reduxMiddleware._subscribe(update);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduxMiddleware]);
 
   return (
