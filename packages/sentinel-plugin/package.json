@@ -1,6 +1,6 @@
 {
   "name": "@sentinel-core/sentinel-plugin",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Vite, Webpack, Rollup and Esbuild plugin for Sentinel AST transformations",
   "author": "firatorhan",
   "private": false,
