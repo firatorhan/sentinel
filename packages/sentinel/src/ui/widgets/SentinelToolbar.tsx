@@ -163,6 +163,13 @@ const actionMatchesSearch = (record: ActionRecord, q: string): boolean => {
 const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?: string }) => {
   const q = search.toLowerCase();
   const filtered = q ? records.filter(r => actionMatchesSearch(r, q)) : records;
+  const [openItems, setOpenItems] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (!q) { setOpenItems([]); return; }
+    setOpenItems(filtered.map(r => String(r.id)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   if (records.length === 0) {
     return <div className="py-4 text-center text-xs text-muted-foreground">No actions dispatched yet.</div>;
@@ -173,7 +180,7 @@ const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?
   }
 
   return (
-    <Accordion type="multiple" value={q ? filtered.map(r => String(r.id)) : undefined} className="w-full font-mono text-xs">
+    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full font-mono text-xs">
       {filtered.map(record => (
         <AccordionItem key={record.id} value={String(record.id)}>
           <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
@@ -295,6 +302,7 @@ const ActionLogTab = ({
 }) => {
   const [records, setRecords] = React.useState<ActionRecord[]>(() => middleware?._getRecords() ?? []);
   const [side, setSide] = React.useState<"client" | "server">("server");
+  const [serverCleared, setServerCleared] = React.useState(false);
 
   React.useEffect(() => {
     if (!middleware) return;
@@ -339,7 +347,7 @@ const ActionLogTab = ({
           </Alert>
         )
       ) : (
-        <ActionLogPane records={serverActionLog} />
+        <ActionLogPane records={serverCleared ? [] : serverActionLog} onClear={() => setServerCleared(true)} />
       )}
     </div>
   );
@@ -470,6 +478,7 @@ function getVisibleIds(effects: EffectRecord[], q: string): Set<number> {
 }
 
 const TYPE_BADGE: Partial<Record<EffectType, { label: string; className: string }>> = {
+  CALL:  { label: "call",  className: "text-emerald-400 border-emerald-400/50" },
   FORK:  { label: "fork",  className: "text-blue-400 border-blue-400/50" },
   SPAWN: { label: "spawn", className: "text-purple-400 border-purple-400/50" },
   TAKE:  { label: "take",  className: "text-amber-400 border-amber-400/50" },
@@ -573,10 +582,55 @@ const EffectTree = ({ effects, search = "" }: { effects: EffectRecord[]; search?
   );
 };
 
+const SagaTypeFilters = ({
+  effects,
+  activeTypes,
+  onChange,
+}: {
+  effects: EffectRecord[];
+  activeTypes: EffectType[];
+  onChange: (types: EffectType[]) => void;
+}) => {
+  const availableTypes = React.useMemo(
+    () => [...new Set(effects.map((e) => e.type))].filter(Boolean) as EffectType[],
+    [effects],
+  );
+
+  if (availableTypes.length === 0) return null;
+
+  return (
+    <ToggleGroup
+      type="multiple"
+      value={activeTypes}
+      onValueChange={(v) => onChange(v as EffectType[])}
+      className="shrink-0 justify-start flex-wrap gap-1"
+    >
+      {availableTypes.map((type) => {
+        const badge = TYPE_BADGE[type];
+        return (
+          <ToggleGroupItem
+            key={type}
+            value={type}
+            className={cn("h-5 px-1.5 min-w-0 text-[10px] font-mono", badge?.className)}
+          >
+            {badge?.label ?? type.toLowerCase()}
+          </ToggleGroupItem>
+        );
+      })}
+    </ToggleGroup>
+  );
+};
+
 const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; onClear?: () => void }) => {
   const effects = rawEffects ?? [];
   const [search, setSearch] = React.useState("");
   const [expanded, setExpanded] = React.useState(false);
+  const [activeTypes, setActiveTypes] = React.useState<EffectType[]>([]);
+
+  const filteredEffects = React.useMemo(
+    () => (activeTypes.length === 0 ? effects : effects.filter((e) => activeTypes.includes(e.type))),
+    [effects, activeTypes],
+  );
 
   return (
     <>
@@ -604,9 +658,10 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             <Maximize2 size={14} />
           </button>
         </div>
+        <SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />
         <ScrollArea className="flex-1 min-h-0">
           <div className="pr-3">
-            <EffectTree effects={effects} search={search} />
+            <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
           </div>
         </ScrollArea>
       </div>
@@ -622,9 +677,10 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-sm shrink-0"
           />
+          <SagaTypeFilters effects={effects} activeTypes={activeTypes} onChange={setActiveTypes} />
           <ScrollArea className="flex-1 min-h-0">
             <div className="pr-3">
-              <EffectTree effects={effects} search={search} />
+              <EffectTree key={activeTypes.join("-")} effects={filteredEffects} search={search} />
             </div>
           </ScrollArea>
         </DialogContent>
@@ -636,6 +692,7 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
 const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
   const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
   const [side, setSide] = React.useState<"client" | "server">("server");
+  const [serverCleared, setServerCleared] = React.useState(false);
 
   React.useEffect(() => {
     if (!monitor) return;
@@ -680,7 +737,7 @@ const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | un
           </Alert>
         )
       ) : (
-        <SagaPane effects={serverEffects} />
+        <SagaPane effects={serverCleared ? [] : serverEffects} onClear={() => setServerCleared(true)} />
       )}
     </div>
   );
