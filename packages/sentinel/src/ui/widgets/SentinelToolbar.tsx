@@ -11,6 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/
 import { JsonNode } from "./JsonNode";
 import { Badge } from "../components/Badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/Accordion";
+import { ScrollArea } from "../components/ScrollArea";
+import { ToggleGroup, ToggleGroupItem } from "../components/ToggleGroup";
+import { Alert, AlertDescription } from "../components/Alert";
 import { useSentinelInteraction } from "../../react";
 import { type ReduxStore } from "../../react/provider";
 import { type SentinelSagaMonitor, type EffectRecord, type EffectType } from "../../saga/createSentinelSagaMonitor";
@@ -88,7 +91,7 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
           </button>
         </div>
 
-        <div className="max-h-60 overflow-y-auto">
+        <ScrollArea className="max-h-80">
           {isPlainObject && entries.length > 0 ? (
             <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={1} search={search} />
           ) : (
@@ -100,7 +103,7 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
               )}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
@@ -250,9 +253,9 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
             <Maximize2 size={14} />
           </button>
         </div>
-        <div className="max-h-60 overflow-y-auto">
+        <ScrollArea className="max-h-80">
           <ActionList records={records} search={search} />
-        </div>
+        </ScrollArea>
       </div>
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
@@ -283,6 +286,7 @@ const ActionLogTab = ({
   serverActionLog?: ActionRecord[];
 }) => {
   const [records, setRecords] = React.useState<ActionRecord[]>(() => middleware?._getRecords() ?? []);
+  const [side, setSide] = React.useState<"client" | "server">("server");
 
   React.useEffect(() => {
     if (!middleware) return;
@@ -295,37 +299,49 @@ const ActionLogTab = ({
   if (!hasServer) {
     if (!middleware) {
       return (
-        <div className="py-6 text-center text-sm text-muted-foreground">
-          No middleware connected.
-          <span className="block mt-1 text-xs font-mono">createSentinelReduxMiddleware()</span>
-        </div>
+        <Alert className="m-3! p-3!">
+          <AlertDescription className="text-xs">
+            No middleware connected.
+            <span className="block font-mono mt-1">createSentinelReduxMiddleware()</span>
+          </AlertDescription>
+        </Alert>
       );
     }
     return <ActionLogPane records={records} onClear={() => middleware._clear()} />;
   }
 
   return (
-    <Tabs defaultValue="server">
-      <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
-        <TabsTrigger value="client" className="text-xs">Client</TabsTrigger>
-        <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
-      </TabsList>
-      <TabsContent value="client" className="mt-0">
-        {middleware ? (
+    <div>
+      <div className="flex justify-center pt-2 pb-1">
+        <ToggleGroup
+          type="single"
+          value={side}
+          onValueChange={(v) => v && setSide(v as "client" | "server")}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="client" className="text-xs h-6 px-3">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs h-6 px-3">Server</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      {side === "client" ? (
+        middleware ? (
           <ActionLogPane records={records} onClear={() => middleware._clear()} />
         ) : (
-          <div className="py-4 text-center text-xs text-muted-foreground">No client middleware connected.</div>
-        )}
-      </TabsContent>
-      <TabsContent value="server" className="mt-0">
+          <Alert className="m-3! p-3!">
+            <AlertDescription className="text-xs">No client middleware connected.</AlertDescription>
+          </Alert>
+        )
+      ) : (
         <ActionLogPane records={serverActionLog} />
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 };
 
 const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefined; serverState?: unknown }) => {
   const [clientState, setClientState] = React.useState<unknown>(store?.getState());
+  const [side, setSide] = React.useState<"client" | "server">("server");
 
   React.useEffect(() => {
     if (!store) return;
@@ -338,52 +354,46 @@ const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefin
   if (!hasServer) {
     if (!store) {
       return (
-        <div className="py-6 text-center text-sm text-muted-foreground">
-          No store connected.
-          <span className="block mt-1 text-xs font-mono">{"<SentinelProvider store={store}>"}</span>
-        </div>
+        <Alert className="m-3! p-3!">
+          <AlertDescription className="text-xs">
+            No store connected.
+            <span className="block font-mono mt-1">{"<SentinelProvider store={store}>"}</span>
+          </AlertDescription>
+        </Alert>
       );
     }
     return <ReduxStatePane state={clientState} />;
   }
 
   return (
-    <Tabs defaultValue="server">
-      <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
-        <TabsTrigger value="client" className="text-xs">Client</TabsTrigger>
-        <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
-      </TabsList>
-      <TabsContent value="client" className="mt-0">
-        {store ? <ReduxStatePane state={clientState} /> : (
-          <div className="py-4 text-center text-xs text-muted-foreground">No client store connected.</div>
-        )}
-      </TabsContent>
-      <TabsContent value="server" className="mt-0">
+    <div>
+      <div className="flex justify-center pt-2 pb-1">
+        <ToggleGroup
+          type="single"
+          value={side}
+          onValueChange={(v) => v && setSide(v as "client" | "server")}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="client" className="text-xs h-6 px-3">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs h-6 px-3">Server</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      {side === "client" ? (
+        store ? (
+          <ReduxStatePane state={clientState} />
+        ) : (
+          <Alert className="m-3! p-3!">
+            <AlertDescription className="text-xs">No client store connected.</AlertDescription>
+          </Alert>
+        )
+      ) : (
         <ReduxStatePane state={serverState} />
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 };
 
-const ReduxTab = ({ store, serverState, reduxMiddleware, serverActionLog }: {
-  store: ReduxStore | undefined;
-  serverState?: unknown;
-  reduxMiddleware?: SentinelReduxMiddleware;
-  serverActionLog?: ActionRecord[];
-}) => (
-  <Tabs defaultValue="state">
-    <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
-      <TabsTrigger value="state" className="text-xs">State</TabsTrigger>
-      <TabsTrigger value="log" className="text-xs">Log</TabsTrigger>
-    </TabsList>
-    <TabsContent value="state" className="mt-0">
-      <ReduxStateSection store={store} serverState={serverState} />
-    </TabsContent>
-    <TabsContent value="log" className="mt-0">
-      <ActionLogTab middleware={reduxMiddleware} serverActionLog={serverActionLog} />
-    </TabsContent>
-  </Tabs>
-);
 
 const STATUS_ICON: Record<EffectRecord["status"], string> = {
   pending: "⏳",
@@ -590,9 +600,9 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             <Maximize2 size={14} />
           </button>
         </div>
-        <div className="max-h-60 overflow-y-auto">
+        <ScrollArea className="max-h-80">
           <EffectTree effects={effects} search={search} />
-        </div>
+        </ScrollArea>
       </div>
 
       <Dialog open={expanded} onOpenChange={setExpanded}>
@@ -617,6 +627,7 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
 
 const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
   const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
+  const [side, setSide] = React.useState<"client" | "server">("server");
 
   React.useEffect(() => {
     if (!monitor) return;
@@ -629,36 +640,43 @@ const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | un
   if (!hasServer) {
     if (!monitor) {
       return (
-        <div className="py-6 text-center text-sm text-muted-foreground">
-          No saga monitor connected.
-          <span className="block mt-1 text-xs font-mono">
-            {"sagaMonitor={sentinelMonitor}"}
-          </span>
-        </div>
+        <Alert className="m-3! p-3!">
+          <AlertDescription className="text-xs">
+            No saga monitor connected.
+            <span className="block font-mono mt-1">{"sagaMonitor={sentinelMonitor}"}</span>
+          </AlertDescription>
+        </Alert>
       );
     }
     return <SagaPane effects={effects} onClear={() => monitor._clear()} />;
   }
 
   return (
-    <Tabs defaultValue="server">
-      <TabsList className="grid w-full grid-cols-2 mx-0 rounded-none border-b bg-transparent h-8 gap-1 mt-2">
-        <TabsTrigger value="client" className="text-xs">Client</TabsTrigger>
-        <TabsTrigger value="server" className="text-xs">Server</TabsTrigger>
-      </TabsList>
-      <TabsContent value="client" className="mt-0">
-        {monitor ? (
+    <div>
+      <div className="flex justify-center pt-2 pb-1">
+        <ToggleGroup
+          type="single"
+          value={side}
+          onValueChange={(v) => v && setSide(v as "client" | "server")}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="client" className="text-xs h-6 px-3">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs h-6 px-3">Server</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+      {side === "client" ? (
+        monitor ? (
           <SagaPane effects={effects} onClear={() => monitor._clear()} />
         ) : (
-          <div className="py-4 text-center text-xs text-muted-foreground">
-            No client monitor connected.
-          </div>
-        )}
-      </TabsContent>
-      <TabsContent value="server" className="mt-0">
+          <Alert className="m-3! p-3!">
+            <AlertDescription className="text-xs">No client monitor connected.</AlertDescription>
+          </Alert>
+        )
+      ) : (
         <SagaPane effects={serverEffects} />
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 };
 
@@ -682,6 +700,30 @@ export const SentinelToolbar = ({
     reduxStore,
   } = useSentinelInteraction();
 
+  const [sagaEffectCount, setSagaEffectCount] = React.useState(() => sagaMonitor?._getEffects().length ?? 0);
+  const [sagaRejectedCount, setSagaRejectedCount] = React.useState(
+    () => sagaMonitor?._getEffects().filter(e => e.status === "rejected").length ?? 0,
+  );
+  const [logCount, setLogCount] = React.useState(() => reduxMiddleware?._getRecords().length ?? 0);
+
+  React.useEffect(() => {
+    if (!sagaMonitor) return;
+    const update = () => {
+      const effects = sagaMonitor._getEffects();
+      setSagaEffectCount(effects.length);
+      setSagaRejectedCount(effects.filter(e => e.status === "rejected").length);
+    };
+    update();
+    return sagaMonitor._subscribe(update);
+  }, [sagaMonitor]);
+
+  React.useEffect(() => {
+    if (!reduxMiddleware) return;
+    const update = () => setLogCount(reduxMiddleware._getRecords().length);
+    update();
+    return reduxMiddleware._subscribe(update);
+  }, [reduxMiddleware]);
+
   return (
     <Portal>
       <div className="sentinel-root">
@@ -698,7 +740,7 @@ export const SentinelToolbar = ({
             <ScanEye size={18} />
           </PopoverTrigger>
 
-          <PopoverContent side="top" align="end" className="w-72">
+          <PopoverContent side="top" align="end" className="w-[440px] max-h-[calc(100vh-5rem)] overflow-y-auto">
             <div className="flex items-center justify-between py-3!">
               <div className="flex items-center gap-2">
                 <ScanEye size={14} className="text-muted-foreground" />
@@ -712,10 +754,34 @@ export const SentinelToolbar = ({
             <Separator />
 
             <Tabs defaultValue="controls">
-              <TabsList className="grid w-full grid-cols-3 mx-0 rounded-none border-b bg-transparent h-9 gap-2">
+              <TabsList className="grid w-full grid-cols-4 mx-0 rounded-none border-b bg-transparent h-9 gap-1">
                 <TabsTrigger value="controls" className="text-xs">Controls</TabsTrigger>
-                <TabsTrigger value="redux" className="text-xs">Redux</TabsTrigger>
-                <TabsTrigger value="saga" className="text-xs">Saga</TabsTrigger>
+                <TabsTrigger value="state" className="text-xs gap-1">
+                  State
+                  {reduxStore && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="log" className="text-xs gap-1">
+                  Log
+                  {logCount > 0 && (
+                    <Badge variant="outline" className="px-1 py-0 text-[9px] font-mono leading-4 h-4 min-w-4">
+                      {logCount > 99 ? "99+" : logCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="saga" className="text-xs gap-1">
+                  Saga
+                  {sagaRejectedCount > 0 ? (
+                    <Badge variant="outline" className="px-1 py-0 text-[9px] font-mono leading-4 h-4 min-w-4 text-red-400 border-red-400/50">
+                      {sagaRejectedCount}
+                    </Badge>
+                  ) : sagaEffectCount > 0 ? (
+                    <Badge variant="outline" className="px-1 py-0 text-[9px] font-mono leading-4 h-4 min-w-4">
+                      {sagaEffectCount > 99 ? "99+" : sagaEffectCount}
+                    </Badge>
+                  ) : null}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="controls" className="mt-0">
@@ -765,8 +831,12 @@ export const SentinelToolbar = ({
                 </div>
               </TabsContent>
 
-              <TabsContent value="redux" className="mt-0">
-                <ReduxTab store={reduxStore} serverState={serverState} reduxMiddleware={reduxMiddleware} serverActionLog={serverActionLog} />
+              <TabsContent value="state" className="mt-0">
+                <ReduxStateSection store={reduxStore} serverState={serverState} />
+              </TabsContent>
+
+              <TabsContent value="log" className="mt-0">
+                <ActionLogTab middleware={reduxMiddleware} serverActionLog={serverActionLog} />
               </TabsContent>
 
               <TabsContent value="saga" className="mt-0">
