@@ -5,6 +5,7 @@ import { VoltranFragment } from "./components/VoltranFragment.jsx";
 import { mockStore } from "./mockStore.js";
 import { mockSagaMonitor } from "./mockSagaMonitor.js";
 import { mockReduxMiddleware } from "./mockReduxMiddleware.js";
+import { serverState, serverSagaEffects, serverActionLog } from "./mockServerData.js";
 
 const fragments = [
   {
@@ -63,6 +64,9 @@ function App() {
           store={mockStore}
           sagaMonitor={mockSagaMonitor}
           reduxMiddleware={mockReduxMiddleware}
+          serverState={serverState}
+          serverSagaEffects={serverSagaEffects}
+          serverActionLog={serverActionLog}
           externalLinks={[voltranExternalLink({ label: "Open in Voltran" })]}
         >
           <div className="flex gap-4 flex-nowrap justify-start">
