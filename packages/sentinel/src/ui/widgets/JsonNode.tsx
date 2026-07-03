@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 const TRUNCATE_AT = 120;
 
@@ -6,7 +7,7 @@ const StringValue = ({ value }: { value: string }) => {
   const [expanded, setExpanded] = useState(false);
 
   if (value.length <= TRUNCATE_AT) {
-    return <span className="text-emerald-400">"{value}"</span>;
+    return <span className="text-emerald-400 break-all">"{value}"</span>;
   }
 
   return (
@@ -36,8 +37,8 @@ export const JsonNode = ({
   const [collapsed, setCollapsed] = useState(depth >= collapseFromDepth);
 
   if (value === null) return <span className="text-muted-foreground">null</span>;
-  if (typeof value === "boolean") return <span className="text-orange-400">{String(value)}</span>;
-  if (typeof value === "number") return <span className="text-orange-400">{value}</span>;
+  if (typeof value === "boolean") return <span className="text-orange-400 break-all">{String(value)}</span>;
+  if (typeof value === "number") return <span className="text-orange-400 break-all">{value}</span>;
   if (typeof value === "string") return <StringValue value={value} />;
 
   if (Array.isArray(value)) {
@@ -46,9 +47,9 @@ export const JsonNode = ({
       <span>
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="text-muted-foreground hover:text-foreground cursor-pointer select-none"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground cursor-pointer select-none"
         >
-          {collapsed ? "▸" : "▾"}
+          {collapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
         </button>
         {collapsed ? (
           <span className="text-muted-foreground"> [{value.length}]</span>
@@ -75,9 +76,9 @@ export const JsonNode = ({
       <span>
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="text-muted-foreground hover:text-foreground cursor-pointer select-none"
+          className="inline-flex items-center text-muted-foreground hover:text-foreground cursor-pointer select-none"
         >
-          {collapsed ? "▸" : "▾"}
+          {collapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
         </button>
         {collapsed ? (
           <span className="text-muted-foreground">

@@ -1,5 +1,5 @@
 import React from "react";
-import { ScanEye, Maximize2 } from "lucide-react";
+import { ScanEye, Maximize2, Clock, Check, X, Ban } from "lucide-react";
 import { Portal } from "@huin-core/react-portal";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/Popover";
 import { Switch } from "../components/Switch";
@@ -39,7 +39,7 @@ const ReduxAccordion = ({
       {items.map(({ key, displayValue }) => (
         <AccordionItem key={key} value={key}>
           <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
-            <span className="flex-1 text-left truncate text-foreground">{key}</span>
+            <span className="flex-1 min-w-0 line-clamp-1 break-all text-left text-foreground">{key}</span>
             <span className="text-muted-foreground text-xs mr-2 shrink-0 font-normal">
               {getPreview(displayValue)}
             </span>
@@ -74,8 +74,8 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
 
   return (
     <>
-      <div className="py-3! space-y-2!">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-col flex-1 min-h-0 py-3! gap-2">
+        <div className="shrink-0 flex items-center gap-1.5">
           <Input
             placeholder="Search state…"
             value={search}
@@ -91,18 +91,20 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
           </button>
         </div>
 
-        <ScrollArea className="max-h-80">
-          {isPlainObject && entries.length > 0 ? (
-            <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={1} search={search} />
-          ) : (
-            <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-              {flatFiltered !== undefined ? (
-                <JsonNode value={flatFiltered} collapseFromDepth={1} />
-              ) : (
-                <span className="text-muted-foreground italic">No results for "{search}"</span>
-              )}
-            </div>
-          )}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="pr-3">
+            {isPlainObject && entries.length > 0 ? (
+              <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={1} search={search} />
+            ) : (
+              <div className="bg-primary text-primary-foreground p-3! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                {flatFiltered !== undefined ? (
+                  <JsonNode value={flatFiltered} collapseFromDepth={1} />
+                ) : (
+                  <span className="text-muted-foreground italic">No results for "{search}"</span>
+                )}
+              </div>
+            )}
+          </div>
         </ScrollArea>
       </div>
 
@@ -117,19 +119,21 @@ const ReduxStatePane = ({ state }: { state: unknown }) => {
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-sm shrink-0"
           />
-          <div className="overflow-y-auto min-h-0 flex-1">
-            {isPlainObject && entries.length > 0 ? (
-              <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={2} search={search} />
-            ) : (
-              <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
-                {flatFiltered !== undefined ? (
-                  <JsonNode value={flatFiltered} collapseFromDepth={2} />
-                ) : (
-                  <span className="text-muted-foreground italic">No results for "{search}"</span>
-                )}
-              </div>
-            )}
-          </div>
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="pr-3">
+              {isPlainObject && entries.length > 0 ? (
+                <ReduxAccordion items={filtered_entries} openKeys={openKeys} collapseDepth={2} search={search} />
+              ) : (
+                <div className="bg-primary text-primary-foreground p-4! rounded-md font-mono text-xs leading-5 overflow-x-hidden">
+                  {flatFiltered !== undefined ? (
+                    <JsonNode value={flatFiltered} collapseFromDepth={2} />
+                  ) : (
+                    <span className="text-muted-foreground italic">No results for "{search}"</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </>
@@ -173,7 +177,7 @@ const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?
       {filtered.map(record => (
         <AccordionItem key={record.id} value={String(record.id)}>
           <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
-            <span className="flex-1 truncate text-left text-foreground">{record.action.type}</span>
+            <span className="flex-1 min-w-0 line-clamp-1 break-all text-left text-foreground">{record.action.type}</span>
             <span className="shrink-0 text-muted-foreground mr-2 text-[10px]">{timeAgo(record.timestamp)}</span>
             {record.diff.length > 0 && (
               <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-mono leading-4 rounded text-amber-400 border-amber-400/50">
@@ -181,16 +185,16 @@ const ActionList = ({ records, search = "" }: { records: ActionRecord[]; search?
               </Badge>
             )}
           </AccordionTrigger>
-          <AccordionContent className="pb-2! pt-0 px-2">
+          <AccordionContent className="pb-2! pt-0 px-1">
             {record.diff.length === 0 ? (
               <span className="text-muted-foreground italic text-xs">No state changes</span>
             ) : (
               <div className="space-y-1.5">
                 {record.diff.map((entry, i) => (
-                  <div key={i} className="bg-muted p-2! rounded overflow-x-hidden">
-                    <div className="flex items-center gap-1.5 mb-1!">
-                      <span className={cn("font-bold text-xs", DIFF_COLOR[entry.type])}>{DIFF_ICON[entry.type]}</span>
-                      <span className="text-foreground text-xs">{entry.path}</span>
+                  <div key={i} className="bg-muted p-2! rounded-md overflow-x-hidden">
+                    <div className="flex items-start gap-1.5 mb-1!">
+                      <span className={cn("font-bold text-xs shrink-0 mt-px", DIFF_COLOR[entry.type])}>{DIFF_ICON[entry.type]}</span>
+                      <span className="text-foreground text-xs break-all">{entry.path}</span>
                     </div>
                     {entry.type === "changed" && (
                       <div className="space-y-1">
@@ -229,8 +233,8 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
 
   return (
     <>
-      <div className="py-3! space-y-2!">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-col flex-1 min-h-0 py-3! gap-2">
+        <div className="shrink-0 flex items-center gap-1.5">
           <Input
             placeholder="Search actions…"
             value={search}
@@ -253,8 +257,10 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
             <Maximize2 size={14} />
           </button>
         </div>
-        <ScrollArea className="max-h-80">
-          <ActionList records={records} search={search} />
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="pr-3">
+            <ActionList records={records} search={search} />
+          </div>
         </ScrollArea>
       </div>
 
@@ -269,9 +275,11 @@ const ActionLogPane = ({ records, onClear }: { records: ActionRecord[]; onClear?
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-sm shrink-0"
           />
-          <div className="overflow-y-auto min-h-0 flex-1">
-            <ActionList records={records} search={search} />
-          </div>
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="pr-3">
+              <ActionList records={records} search={search} />
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </>
@@ -311,17 +319,15 @@ const ActionLogTab = ({
   }
 
   return (
-    <div>
-      <div className="flex justify-center pt-2 pb-1">
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="shrink-0 flex justify-center pt-2 pb-1">
         <ToggleGroup
           type="single"
           value={side}
           onValueChange={(v) => v && setSide(v as "client" | "server")}
-          variant="outline"
-          size="sm"
         >
-          <ToggleGroupItem value="client" className="text-xs h-6 px-3">Client</ToggleGroupItem>
-          <ToggleGroupItem value="server" className="text-xs h-6 px-3">Server</ToggleGroupItem>
+          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
         </ToggleGroup>
       </div>
       {side === "client" ? (
@@ -366,17 +372,15 @@ const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefin
   }
 
   return (
-    <div>
-      <div className="flex justify-center pt-2 pb-1">
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="shrink-0 flex justify-center pt-2 pb-1">
         <ToggleGroup
           type="single"
           value={side}
           onValueChange={(v) => v && setSide(v as "client" | "server")}
-          variant="outline"
-          size="sm"
         >
-          <ToggleGroupItem value="client" className="text-xs h-6 px-3">Client</ToggleGroupItem>
-          <ToggleGroupItem value="server" className="text-xs h-6 px-3">Server</ToggleGroupItem>
+          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
         </ToggleGroup>
       </div>
       {side === "client" ? (
@@ -395,11 +399,11 @@ const ReduxStateSection = ({ store, serverState }: { store: ReduxStore | undefin
 };
 
 
-const STATUS_ICON: Record<EffectRecord["status"], string> = {
-  pending: "⏳",
-  resolved: "✓",
-  rejected: "✗",
-  cancelled: "⊘",
+const STATUS_ICON: Record<EffectRecord["status"], React.ReactNode> = {
+  pending:   <Clock size={11} />,
+  resolved:  <Check size={11} />,
+  rejected:  <X size={11} />,
+  cancelled: <Ban size={11} />,
 };
 
 const STATUS_COLOR: Record<EffectRecord["status"], string> = {
@@ -531,28 +535,28 @@ const EffectTree = ({ effects, search = "" }: { effects: EffectRecord[]; search?
                   {typeBadge.label}
                 </Badge>
               )}
-              <span className="flex-1 truncate text-left text-foreground mx-2">{effect.fnName}</span>
+              <span className="flex-1 min-w-0 line-clamp-1 break-all text-left text-foreground mx-2">{effect.fnName}</span>
               {effect.duration !== undefined && (
                 <span className="shrink-0 text-muted-foreground mr-1">{effect.duration}ms</span>
               )}
             </AccordionTrigger>
 
-            <AccordionContent className="pb-2! pt-0" style={{ paddingLeft: `${depth * 12 + 8}px` }}>
-              <div className="space-y-1.5 pr-2">
+            <AccordionContent className="pb-2! pt-0 px-1" style={{ paddingLeft: `${depth * 12 + 8}px` }}>
+              <div className="space-y-1.5">
                 {(effect.args?.length ?? 0) > 0 && (
-                  <div className="bg-muted p-2! rounded overflow-x-hidden">
+                  <div className="bg-muted p-2! rounded-md overflow-x-hidden">
                     <div className="text-muted-foreground mb-1!">args</div>
                     <JsonNode value={displayArgs} collapseFromDepth={q ? 10 : 1} />
                   </div>
                 )}
                 {effect.result !== undefined && (
-                  <div className="bg-primary text-primary-foreground p-2! rounded overflow-x-hidden">
+                  <div className="bg-primary text-primary-foreground p-2! rounded-md overflow-x-hidden">
                     <div className="text-muted-foreground mb-1">result</div>
                     <JsonNode value={displayResult} collapseFromDepth={q ? 10 : 1} />
                   </div>
                 )}
                 {displayError !== undefined && (
-                  <div className="bg-destructive/10 text-destructive p-2 rounded overflow-x-hidden">
+                  <div className="bg-destructive/10 text-destructive p-2! rounded-md overflow-x-hidden">
                     <div className="mb-1! font-medium">error</div>
                     <JsonNode
                       value={displayError instanceof Error ? displayError.message : displayError}
@@ -576,8 +580,8 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
 
   return (
     <>
-      <div className="py-3! space-y-2!">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-col flex-1 min-h-0 py-3! gap-2">
+        <div className="shrink-0 flex items-center gap-1.5">
           <Input
             placeholder="Deep search calls…"
             value={search}
@@ -600,8 +604,10 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             <Maximize2 size={14} />
           </button>
         </div>
-        <ScrollArea className="max-h-80">
-          <EffectTree effects={effects} search={search} />
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="pr-3">
+            <EffectTree effects={effects} search={search} />
+          </div>
         </ScrollArea>
       </div>
 
@@ -616,9 +622,11 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-sm shrink-0"
           />
-          <div className="overflow-y-auto min-h-0 flex-1">
-            <EffectTree effects={effects} search={search} />
-          </div>
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="pr-3">
+              <EffectTree effects={effects} search={search} />
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </>
@@ -652,17 +660,15 @@ const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | un
   }
 
   return (
-    <div>
-      <div className="flex justify-center pt-2 pb-1">
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className="shrink-0 flex justify-center pt-2 pb-1">
         <ToggleGroup
           type="single"
           value={side}
           onValueChange={(v) => v && setSide(v as "client" | "server")}
-          variant="outline"
-          size="sm"
         >
-          <ToggleGroupItem value="client" className="text-xs h-6 px-3">Client</ToggleGroupItem>
-          <ToggleGroupItem value="server" className="text-xs h-6 px-3">Server</ToggleGroupItem>
+          <ToggleGroupItem value="client" className="text-xs">Client</ToggleGroupItem>
+          <ToggleGroupItem value="server" className="text-xs">Server</ToggleGroupItem>
         </ToggleGroup>
       </div>
       {side === "client" ? (
@@ -740,8 +746,13 @@ export const SentinelToolbar = ({
             <ScanEye size={18} />
           </PopoverTrigger>
 
-          <PopoverContent side="top" align="end" className="w-[440px] max-h-[calc(100vh-5rem)] overflow-y-auto">
-            <div className="flex items-center justify-between py-3!">
+          <PopoverContent
+            side="top"
+            align="end"
+            className="w-[440px] h-[540px] flex flex-col overflow-hidden"
+            onWheel={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between py-3! shrink-0">
               <div className="flex items-center gap-2">
                 <ScanEye size={14} className="text-muted-foreground" />
                 <span className="text-sm font-semibold">Sentinel</span>
@@ -753,8 +764,8 @@ export const SentinelToolbar = ({
 
             <Separator />
 
-            <Tabs defaultValue="controls">
-              <TabsList className="grid w-full grid-cols-4 mx-0 rounded-none border-b bg-transparent h-9 gap-1">
+            <Tabs defaultValue="controls" className="flex flex-col flex-1 min-h-0">
+              <TabsList className="grid w-full grid-cols-4 mx-0 rounded-none border-b bg-transparent h-9 gap-1 shrink-0">
                 <TabsTrigger value="controls" className="text-xs">Controls</TabsTrigger>
                 <TabsTrigger value="state" className="text-xs gap-1">
                   State
@@ -784,7 +795,7 @@ export const SentinelToolbar = ({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="controls" className="mt-0">
+              <TabsContent value="controls" className="mt-0 flex-1 overflow-y-auto">
                 <div className="flex items-center justify-between py-3!">
                   <Label htmlFor="sentinel-active-switch" className="cursor-pointer">
                     Active
@@ -831,15 +842,15 @@ export const SentinelToolbar = ({
                 </div>
               </TabsContent>
 
-              <TabsContent value="state" className="mt-0">
+              <TabsContent value="state" className="mt-0 flex-1 flex flex-col min-h-0">
                 <ReduxStateSection store={reduxStore} serverState={serverState} />
               </TabsContent>
 
-              <TabsContent value="log" className="mt-0">
+              <TabsContent value="log" className="mt-0 flex-1 flex flex-col min-h-0">
                 <ActionLogTab middleware={reduxMiddleware} serverActionLog={serverActionLog} />
               </TabsContent>
 
-              <TabsContent value="saga" className="mt-0">
+              <TabsContent value="saga" className="mt-0 flex-1 flex flex-col min-h-0">
                 <SagaTab monitor={sagaMonitor} serverEffects={serverSagaEffects} />
               </TabsContent>
             </Tabs>
