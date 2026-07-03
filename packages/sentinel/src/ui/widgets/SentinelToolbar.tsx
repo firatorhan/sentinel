@@ -22,6 +22,16 @@ import { type SentinelReduxMiddleware, type ActionRecord, type DiffType } from "
 import { cn } from "../../utils/cn";
 import { getPreview, filterState, filteredEntries } from "../../utils/stateSearch";
 
+// Replaced by Vite `define` at build time with the package version
+declare const __SENTINEL_VERSION__: string;
+const CORE_VERSION = typeof __SENTINEL_VERSION__ !== "undefined" ? __SENTINEL_VERSION__ : "";
+
+// Set by @sentinel-core/sentinel-plugin in transformed modules
+const getPluginVersion = (): string | undefined =>
+  typeof globalThis !== "undefined"
+    ? ((globalThis as Record<string, unknown>).__SENTINEL_PLUGIN_VERSION__ as string | undefined)
+    : undefined;
+
 const ReduxAccordion = ({
   items,
   openKeys,
@@ -744,6 +754,8 @@ export const SentinelToolbar = ({
     reduxStore,
   } = useSentinelInteraction();
 
+  const pluginVersion = getPluginVersion();
+
   // Badges mirror the default views: CALL effects only, system actions excluded
   const countCalls = () => sagaMonitor?._getEffects().filter(e => e.type === "CALL").length ?? 0;
   const countLog = () =>
@@ -798,12 +810,21 @@ export const SentinelToolbar = ({
           >
             <div className="flex items-center justify-between py-3! shrink-0">
               <div className="flex items-center gap-2">
-                <ScanEye size={14} className="text-muted-foreground" />
+                <ScanEye
+                  size={14}
+                  className={cn(
+                    "transition-colors",
+                    isActive ? "text-emerald-400" : "text-muted-foreground",
+                  )}
+                />
                 <span className="text-sm font-semibold">Sentinel</span>
+                {(CORE_VERSION || pluginVersion) && (
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {CORE_VERSION && `v${CORE_VERSION}`}
+                    {pluginVersion && ` · plugin v${pluginVersion}`}
+                  </span>
+                )}
               </div>
-              <kbd className="text-sm text-muted-foreground bg-muted px-1.5! py-0.5! rounded font-mono">
-                ⌃ ⇧ S
-              </kbd>
             </div>
 
             <Separator />
@@ -839,7 +860,7 @@ export const SentinelToolbar = ({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="controls" className="mt-0 flex-1 overflow-y-auto">
+              <TabsContent value="controls" className="mt-0 flex-1 overflow-y-auto flex flex-col">
                 <div className="flex items-center justify-between py-3!">
                   <Label htmlFor="sentinel-active-switch" className="cursor-pointer">
                     Active
@@ -883,6 +904,25 @@ export const SentinelToolbar = ({
                     disabled={!isActive}
                     className="h-8 text-sm"
                   />
+                </div>
+
+                <div className="mt-auto">
+                  <Separator />
+                  <div className="py-3! space-y-2!">
+                    <span className="text-xs text-muted-foreground">Shortcuts</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Toggle inspector</span>
+                      <kbd className="text-xs text-muted-foreground bg-muted px-1.5! py-0.5! rounded font-mono">
+                        ⌃ ⇧ S
+                      </kbd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Expand JSON subtree</span>
+                      <kbd className="text-xs text-muted-foreground bg-muted px-1.5! py-0.5! rounded font-mono">
+                        ⌥ + click
+                      </kbd>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
 

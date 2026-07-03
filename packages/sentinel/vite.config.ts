@@ -29,7 +29,14 @@ const addImportantToSentinelRules = (): Plugin => ({
   },
 });
 
+const pkg = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, "package.json"), "utf-8"),
+) as { version: string };
+
 export default defineConfig({
+  define: {
+    __SENTINEL_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react({
       jsxRuntime: "classic",

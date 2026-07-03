@@ -9,6 +9,30 @@ import { wrapFunctionBody, wrapClassRenderMethod } from "./wrapper";
 const traverse = (traverseModule as any).default || traverseModule;
 const generate = (generateModule as any).default || generateModule;
 
+// Replaced by tsup `define` at build time with the package version
+declare const __SENTINEL_PLUGIN_VERSION__: string;
+const PLUGIN_VERSION =
+  typeof __SENTINEL_PLUGIN_VERSION__ !== "undefined" ? __SENTINEL_PLUGIN_VERSION__ : "0.0.0";
+
+// globalThis.__SENTINEL_PLUGIN_VERSION__ = "<version>" — lets the sentinel
+// toolbar display which plugin version transformed the app
+const buildVersionStatement = (): t.ExpressionStatement =>
+  t.expressionStatement(
+    t.logicalExpression(
+      "&&",
+      t.binaryExpression(
+        "!==",
+        t.unaryExpression("typeof", t.identifier("globalThis")),
+        t.stringLiteral("undefined"),
+      ),
+      t.assignmentExpression(
+        "=",
+        t.memberExpression(t.identifier("globalThis"), t.identifier("__SENTINEL_PLUGIN_VERSION__")),
+        t.stringLiteral(PLUGIN_VERSION),
+      ),
+    ),
+  );
+
 export function transformCode(code: string, id: string, isInInclude: boolean, addWatchFile?: (path: string) => void) {
   const firstNonEmptyLine = code.split("\n").find((l) => l.trim().length > 0)?.trim() ?? "";
   if (firstNonEmptyLine === "// @sentinel-ignore") return null;
@@ -58,7 +82,7 @@ export function transformCode(code: string, id: string, isInInclude: boolean, ad
     }
   }
 
-  ast.program.body.unshift(...importsToInject);
+  ast.program.body.unshift(...importsToInject, buildVersionStatement());
 
   const wrapNamed = (pathNode: NodePath<any>, name: string) => {
     const info = componentsToWrap.get(name)!;
