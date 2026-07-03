@@ -5,6 +5,12 @@ import * as t from "@babel/types";
 
 const traverse = (traverseModule as any).default || traverseModule;
 
+export const isKnownHocCall = (callee: t.Node): boolean =>
+  (t.isIdentifier(callee) && (callee.name === "memo" || callee.name === "forwardRef")) ||
+  (t.isMemberExpression(callee) &&
+    t.isIdentifier(callee.property) &&
+    (callee.property.name === "memo" || callee.property.name === "forwardRef"));
+
 export interface ComponentInfo {
   mdIdentifier: string | null;
 }
@@ -58,12 +64,7 @@ export function scanFile(ast: t.File, id: string, code: string, isInInclude: boo
         if ((t.isArrowFunctionExpression(init) || t.isFunctionExpression(init)) && !init.async) {
           checkAndRegisterComponent(idNode.name, pathNode.parentPath.node);
         } else if (t.isCallExpression(init)) {
-          const callee = init.callee;
-          const isKnownHoc =
-            (t.isIdentifier(callee) && (callee.name === 'memo' || callee.name === 'forwardRef')) ||
-            (t.isMemberExpression(callee) && t.isIdentifier(callee.property) &&
-              (callee.property.name === 'memo' || callee.property.name === 'forwardRef'));
-          if (isKnownHoc) {
+          if (isKnownHocCall(init.callee)) {
             const firstArg = init.arguments[0];
             if ((t.isArrowFunctionExpression(firstArg) || t.isFunctionExpression(firstArg)) && !firstArg.async) {
               checkAndRegisterComponent(idNode.name, pathNode.parentPath.node);

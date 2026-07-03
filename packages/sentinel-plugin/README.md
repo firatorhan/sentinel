@@ -91,11 +91,12 @@ build({
 
 The plugin transforms your source files at build time using Babel AST:
 
-1. **Detects React components** — PascalCase function declarations, arrow functions, function expressions, and class components with a `render()` method. Skips `async` functions.
+1. **Detects React components** — PascalCase function declarations, arrow functions, function expressions, `memo(…)` / `forwardRef(…)`-wrapped components, and class components with a `render()` method. Skips `async` functions.
 2. **Wraps render output** — Rewrites each component's return to `<Sentinel componentProps={props}>...</Sentinel>`.
 3. **Injects imports** — Adds `import { Sentinel } from "@sentinel-core/sentinel"` automatically.
 4. **Tracks render count** — Injects a `useRef` counter for function components, `this._sentinel_rc` for class components.
 5. **Auto-imports `.md` docs** — If `Foo.md` exists next to `Foo.jsx`, it's imported as a raw string and passed as `dialogMd` to the Sentinel wrapper. Shown in the dialog's `.md` tab.
+6. **Stamps its version** — Transformed modules set `globalThis.__SENTINEL_PLUGIN_VERSION__`, which the Sentinel toolbar header displays next to the core version (`Sentinel v1.0.59 · plugin v1.0.21`) so version mismatches are visible at a glance.
 
 ## Comment Directives
 

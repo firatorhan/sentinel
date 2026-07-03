@@ -1,4 +1,6 @@
 import { type EffectRecord } from "../saga/createSentinelSagaMonitor";
+import { safeClone } from "./safeClone";
+import { getPreview } from "./stateSearch";
 
 export type PropMatch = {
   propPath: string;
@@ -24,15 +26,6 @@ export type ApiCall = {
   propMatches?: PropMatch[];
   unmatchedPropPaths?: string[];
   origin: "client" | "server";
-};
-
-const safeClone = <T,>(val: unknown): T | undefined => {
-  if (val === undefined || val === null) return undefined;
-  try {
-    return JSON.parse(JSON.stringify(val)) as T;
-  } catch {
-    return undefined;
-  }
 };
 
 type AxiosLikeConfig = {
@@ -97,16 +90,13 @@ const normalize = (val: unknown): string | undefined => {
   return undefined;
 };
 
-const previewOf = (val: unknown): string =>
-  typeof val === "string" ? `"${val.length > 40 ? `${val.slice(0, 40)}…` : val}"` : String(val);
-
 type Leaf = { path: string; norm: string; preview: string };
 
 const collectLeaves = (val: unknown, path: string, out: Leaf[], depth: number): void => {
   if (out.length >= MAX_PRIMITIVES || depth > MAX_DEPTH || val === null || val === undefined) return;
   const norm = normalize(val);
   if (norm !== undefined) {
-    out.push({ path, norm, preview: previewOf(val) });
+    out.push({ path, norm, preview: getPreview(val) });
     return;
   }
   if (typeof val !== "object") return;

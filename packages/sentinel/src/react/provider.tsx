@@ -220,10 +220,3 @@ export const useSentinelInteraction = () =>
 
 export const useSentinelDialog = () =>
   useContext(SentinelDialogContext) ?? noopDialog;
-
-// Geriye dönük uyumluluk için birleşik hook
-export const useSentinel = () => {
-  const interaction = useSentinelInteraction();
-  const dialog = useSentinelDialog();
-  return { ...interaction, ...dialog };
-};

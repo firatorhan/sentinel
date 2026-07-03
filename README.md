@@ -48,8 +48,11 @@ function ClientApp() {
 
 - **Component inspector** — hover to highlight, click to open a dialog with props, render count, and source link
 - **Props history** — last 6 prop snapshots with accordion diff view
-- **Redux tab** — live state tree with deep search, Client/Server toggle for SSR
-- **Saga tab** — effect call list with deep search across args/result/error, status indicators
+- **API Layer tab** — HTTP calls extracted from saga effects, filtered to the requests that supplied the clicked component's props, with a props ↔ response field mapping and copy-as-cURL
+- **State tab** — live Redux state tree with deep search, Client/Server toggle for SSR
+- **Log tab** — dispatched actions with state diffs; framework actions (`@@…`, `persist/…`) hidden behind a System toggle, consecutive duplicates grouped
+- **Saga tab** — effect tree with deep search across args/result/error; shows CALL effects by default with quick type filters for the rest
+- **JSON tree** — per-node copy value / copy path, `⌥`+click to expand a whole subtree, large arrays load in chunks
 - **External links** — configurable deep-links in the dialog header (e.g. open a Voltran MFE)
 - **`.md` docs** — place a `Foo.md` next to `Foo.jsx` to show component docs in the dialog
 

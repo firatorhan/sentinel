@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { JsonNode } from "./JsonNode";
+import { CopyButton } from "./CopyButton";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/Accordion";
 import { Input } from "../components/Input";
 import { getPreview, filteredEntries } from "../../utils/stateSearch";
@@ -12,23 +13,17 @@ export const PropsViewer = ({
   history?: Record<string, unknown>[];
 }) => {
   const [search, setSearch] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const entries = Object.entries(data);
   const filtered = useMemo(() => filteredEntries(entries, search), [entries, search]);
   const openKeys = search ? filtered.map((e) => e.key) : undefined;
 
-  const handleCopy = () => {
-    const text = (() => {
-      try {
-        return JSON.stringify(data, null, 2);
-      } catch {
-        return "[Circular structure — could not serialize]";
-      }
-    })();
-    void navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const propsAsJson = () => {
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return "[Circular structure — could not serialize]";
+    }
   };
 
   const prevRenders = history?.slice(1) ?? [];
@@ -42,12 +37,7 @@ export const PropsViewer = ({
           onChange={(e) => setSearch(e.target.value)}
           className="h-7 text-xs"
         />
-        <button
-          onClick={handleCopy}
-          className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-        >
-          {copied ? "✓ Copied" : "Copy"}
-        </button>
+        <CopyButton getText={propsAsJson} />
       </div>
 
       {filtered.length === 0 ? (

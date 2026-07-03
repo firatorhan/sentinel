@@ -11,8 +11,8 @@ const DARK = "rgba(10, 10, 12, 0.72)";
 const BLUR = "blur(8px) saturate(140%) contrast(105%)";
 
 export const Spotlight = ({ children, active = true }: SpotlightProps) => {
-  if (!active) return <>{children}</>;
   const { activeRect } = useSentinelInteraction();
+  if (!active) return <>{children}</>;
 
   return (
     <>

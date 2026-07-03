@@ -1,5 +1,11 @@
-const MAX_RECORDS = 50;
+import { safeClone } from "../utils/safeClone";
+
+const DEFAULT_MAX_RECORDS = 50;
 let _id = 0;
+
+export type SentinelReduxMiddlewareOptions = {
+  maxRecords?: number;
+};
 
 export type DiffType = "added" | "removed" | "changed";
 
@@ -51,7 +57,10 @@ function diffTopLevel(prev: unknown, next: unknown): DiffEntry[] {
   return result;
 }
 
-export const createSentinelReduxMiddleware = (): SentinelReduxMiddleware => {
+export const createSentinelReduxMiddleware = (
+  options: SentinelReduxMiddlewareOptions = {},
+): SentinelReduxMiddleware => {
+  const maxRecords = options.maxRecords ?? DEFAULT_MAX_RECORDS;
   const records: ActionRecord[] = [];
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach(l => l());
@@ -70,7 +79,7 @@ export const createSentinelReduxMiddleware = (): SentinelReduxMiddleware => {
         timestamp: Date.now(),
       });
 
-      if (records.length > MAX_RECORDS) records.pop();
+      if (records.length > maxRecords) records.pop();
       notify();
       return result;
     },
@@ -78,20 +87,13 @@ export const createSentinelReduxMiddleware = (): SentinelReduxMiddleware => {
     _getRecords() { return records; },
 
     _getSerializableRecords() {
-      return records.map(r => {
-        try {
-          return JSON.parse(JSON.stringify(r)) as ActionRecord;
-        } catch {
-          return {
-            ...r,
-            action: { type: r.action.type },
-            diff: r.diff.map(e => {
-              try { return JSON.parse(JSON.stringify(e)) as typeof e; }
-              catch { return { path: e.path, type: e.type } as typeof e; }
-            }),
-          };
-        }
-      });
+      return records.map(r =>
+        safeClone(r) ?? {
+          ...r,
+          action: { type: r.action.type },
+          diff: r.diff.map(e => safeClone(e) ?? { path: e.path, type: e.type }),
+        },
+      );
     },
 
     _subscribe(listener) {

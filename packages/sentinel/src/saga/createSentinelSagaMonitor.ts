@@ -1,4 +1,10 @@
-const MAX_RECORDS = 100;
+import { safeClone } from "../utils/safeClone";
+
+const DEFAULT_MAX_RECORDS = 100;
+
+export type SentinelSagaMonitorOptions = {
+  maxRecords?: number;
+};
 
 export type EffectStatus = "pending" | "resolved" | "rejected" | "cancelled";
 export type EffectType = "CALL" | "FORK" | "SPAWN" | "TAKE" | "PUT" | "unknown";
@@ -25,15 +31,6 @@ export type SentinelSagaMonitor = {
   _getEffects(): EffectRecord[];
   _getSerializableEffects(): EffectRecord[];
   _clear(): void;
-};
-
-const safeClone = (val: unknown): unknown => {
-  if (val === undefined || val === null) return val;
-  try {
-    return JSON.parse(JSON.stringify(val));
-  } catch {
-    return null;
-  }
 };
 
 const safeResult = (result: unknown): unknown => {
@@ -65,14 +62,17 @@ const safeResult = (result: unknown): unknown => {
   return safeClone(result);
 };
 
-export const createSentinelSagaMonitor = (): SentinelSagaMonitor => {
+export const createSentinelSagaMonitor = (
+  options: SentinelSagaMonitorOptions = {},
+): SentinelSagaMonitor => {
+  const maxRecords = options.maxRecords ?? DEFAULT_MAX_RECORDS;
   const effects = new Map<number, EffectRecord>();
   const listeners = new Set<() => void>();
 
   const notify = () => listeners.forEach((l) => l());
 
   const trim = () => {
-    if (effects.size > MAX_RECORDS) {
+    if (effects.size > maxRecords) {
       effects.delete(effects.keys().next().value!);
     }
   };

@@ -24,6 +24,8 @@ const buttonVariants = cva(
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        // Compact text/icon actions inside toolbar panes and viewers
+        xs: "h-6 rounded px-1.5 gap-1 text-xs font-normal [&_svg]:size-3",
       },
     },
     defaultVariants: {
