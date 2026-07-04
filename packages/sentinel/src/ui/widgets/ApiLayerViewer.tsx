@@ -46,14 +46,25 @@ const displayPath = (url: string): string => {
 };
 
 
+const callMatchesSearch = (call: ApiCall, q: string): boolean =>
+  call.url.toLowerCase().includes(q) ||
+  call.method.toLowerCase().includes(q) ||
+  call.origin.includes(q) ||
+  String(call.responseStatus ?? "").includes(q) ||
+  (call.errorMessage?.toLowerCase().includes(q) ?? false) ||
+  call.fnName.toLowerCase().includes(q);
+
 export const ApiLayerViewer = ({
   effects,
   serverEffects,
   componentProps,
+  search,
 }: {
   effects?: EffectRecord[];
   serverEffects?: EffectRecord[];
   componentProps?: Record<string, unknown>;
+  // External filter (e.g. the toolbar pane's search input)
+  search?: string;
 }) => {
   const calls = React.useMemo(
     () =>
@@ -88,7 +99,9 @@ export const ApiLayerViewer = ({
   const [view, setView] = React.useState<"matched" | "all">("matched");
 
   const hasMatches = matched.length > 0;
-  const displayed = view === "matched" && hasMatches ? matched : calls;
+  const q = (search ?? "").trim().toLowerCase();
+  const base = view === "matched" && hasMatches ? matched : calls;
+  const displayed = q ? base.filter((c) => callMatchesSearch(c, q)) : base;
 
   const fragmentIds = React.useMemo(
     () => [
@@ -130,38 +143,43 @@ export const ApiLayerViewer = ({
           )}
         </div>
       )}
-      {hasMatches ? (
-        matched.length < calls.length && (
-          <div className="flex justify-end px-1">
-            <ToggleGroup
-              type="single"
-              value={view}
-              onValueChange={(v) => v && setView(v as "matched" | "all")}
-            >
-              <ToggleGroupItem value="matched" className="h-6 px-2 text-[10px]">
-                Props match ({matched.length})
-              </ToggleGroupItem>
-              <ToggleGroupItem value="all" className="h-6 px-2 text-[10px]">
-                All ({calls.length})
-              </ToggleGroupItem>
-            </ToggleGroup>
+      {componentProps &&
+        (hasMatches ? (
+          matched.length < calls.length && (
+            <div className="flex justify-end px-1">
+              <ToggleGroup
+                type="single"
+                value={view}
+                onValueChange={(v) => v && setView(v as "matched" | "all")}
+              >
+                <ToggleGroupItem value="matched" className="h-6 px-2 text-[10px]">
+                  Props match ({matched.length})
+                </ToggleGroupItem>
+                <ToggleGroupItem value="all" className="h-6 px-2 text-[10px]">
+                  All ({calls.length})
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          )
+        ) : (
+          <div className="px-1 text-[10px] text-muted-foreground">
+            No request correlates with this component's props — showing all {calls.length} calls.
           </div>
-        )
-      ) : (
-        <div className="px-1 text-[10px] text-muted-foreground">
-          No request correlates with this component's props — showing all {calls.length} calls.
-        </div>
-      )}
-      <Accordion type="multiple" className="w-full font-mono text-xs">
-        {displayed.map((call) => (
-          <ApiCallItem
-            key={`${call.origin}-${call.effectId}-${call.subIndex ?? 0}`}
-            call={call}
-            showOrigin={hasServerCalls}
-            duplicateCount={duplicateCounts.get(`${call.origin} ${call.method} ${call.url}`) ?? 1}
-          />
         ))}
-      </Accordion>
+      {displayed.length === 0 ? (
+        <span className="text-muted-foreground italic text-xs px-1">No results for "{search}"</span>
+      ) : (
+        <Accordion type="multiple" className="w-full font-mono text-xs">
+          {displayed.map((call) => (
+            <ApiCallItem
+              key={`${call.origin}-${call.effectId}-${call.subIndex ?? 0}`}
+              call={call}
+              showOrigin={hasServerCalls}
+              duplicateCount={duplicateCounts.get(`${call.origin} ${call.method} ${call.url}`) ?? 1}
+            />
+          ))}
+        </Accordion>
+      )}
     </div>
   );
 };

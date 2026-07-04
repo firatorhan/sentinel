@@ -21,6 +21,8 @@ import { type SentinelSagaMonitor, type EffectRecord, type EffectType } from "..
 import { type SentinelReduxMiddleware, type ActionRecord, type DiffType } from "../../redux/createSentinelReduxMiddleware";
 import { cn } from "../../utils/cn";
 import { getPreview, filterState, filteredEntries } from "../../utils/stateSearch";
+import { extractApiCalls } from "../../utils/apiCalls";
+import { ApiLayerViewer } from "./ApiLayerViewer";
 
 // Replaced by Vite `define` at build time with the package version
 declare const __SENTINEL_VERSION__: string;
@@ -709,6 +711,40 @@ const SagaPane = ({ effects: rawEffects, onClear }: { effects?: EffectRecord[]; 
   );
 };
 
+// Page-wide inventory of every captured request — no component correlation,
+// unlike the API Layer tab in the component dialog.
+const ApiPane = ({ effects, serverEffects }: { effects?: EffectRecord[]; serverEffects?: EffectRecord[] }) => (
+  <ExpandablePane title="API Calls" searchPlaceholder="Search requests…">
+    {(search) => (
+      <ApiLayerViewer effects={effects} serverEffects={serverEffects} search={search} />
+    )}
+  </ExpandablePane>
+);
+
+const ApiTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
+  const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
+
+  React.useEffect(() => {
+    if (!monitor) return;
+    setEffects(monitor._getEffects());
+    return monitor._subscribe(() => setEffects(monitor._getEffects()));
+  }, [monitor]);
+
+  return (
+    <ClientServerSection
+      hasServer={serverEffects != null}
+      clientPane={monitor ? <ApiPane effects={effects} /> : null}
+      serverPane={<ApiPane serverEffects={serverEffects} />}
+      noClientMessage={
+        <>
+          No saga monitor connected.
+          <span className="block font-mono mt-1">{"sagaMonitor={sentinelMonitor}"}</span>
+        </>
+      }
+    />
+  );
+};
+
 const SagaTab = ({ monitor, serverEffects }: { monitor: SentinelSagaMonitor | undefined; serverEffects?: EffectRecord[] }) => {
   const [effects, setEffects] = React.useState<EffectRecord[]>(() => monitor?._getEffects() ?? []);
   const [serverCleared, setServerCleared] = React.useState(false);
@@ -767,12 +803,22 @@ export const SentinelToolbar = ({
   );
   const [logCount, setLogCount] = React.useState(countLog);
 
+  const serverApiCount = React.useMemo(
+    () => extractApiCalls(serverSagaEffects ?? [], undefined, "server").length,
+    [serverSagaEffects],
+  );
+  const countClientApi = () =>
+    sagaMonitor ? extractApiCalls(sagaMonitor._getEffects(), undefined, "client").length : 0;
+  const [clientApiCount, setClientApiCount] = React.useState(countClientApi);
+  const apiCount = clientApiCount + serverApiCount;
+
   React.useEffect(() => {
     if (!sagaMonitor) return;
     const update = () => {
       const effects = sagaMonitor._getEffects();
       setSagaEffectCount(effects.filter(e => e.type === "CALL").length);
       setSagaRejectedCount(effects.filter(e => e.status === "rejected").length);
+      setClientApiCount(extractApiCalls(effects, undefined, "client").length);
     };
     update();
     return sagaMonitor._subscribe(update);
@@ -830,7 +876,7 @@ export const SentinelToolbar = ({
             <Separator />
 
             <Tabs defaultValue="controls" className="flex flex-col flex-1 min-h-0">
-              <TabsList className="grid w-full grid-cols-4 mx-0 rounded-none border-b bg-transparent h-9 gap-1 shrink-0">
+              <TabsList className="grid w-full grid-cols-5 mx-0 rounded-none border-b bg-transparent h-9 gap-1 shrink-0">
                 <TabsTrigger value="controls" className="text-xs">Controls</TabsTrigger>
                 <TabsTrigger value="state" className="text-xs gap-1">
                   State
@@ -857,6 +903,14 @@ export const SentinelToolbar = ({
                       {sagaEffectCount > 99 ? "99+" : sagaEffectCount}
                     </Badge>
                   ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="api" className="text-xs gap-1">
+                  API
+                  {apiCount > 0 && (
+                    <Badge variant="outline" className="px-1 py-0 text-[9px] font-mono leading-4 h-4 min-w-4">
+                      {apiCount > 99 ? "99+" : apiCount}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
@@ -936,6 +990,10 @@ export const SentinelToolbar = ({
 
               <TabsContent value="saga" className="mt-0 flex-1 flex flex-col min-h-0">
                 <SagaTab monitor={sagaMonitor} serverEffects={serverSagaEffects} />
+              </TabsContent>
+
+              <TabsContent value="api" className="mt-0 flex-1 flex flex-col min-h-0">
+                <ApiTab monitor={sagaMonitor} serverEffects={serverSagaEffects} />
               </TabsContent>
             </Tabs>
           </PopoverContent>
