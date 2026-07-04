@@ -98,13 +98,17 @@ const toApiCall = (
   matchScore: 0,
 });
 
-const MAX_PRIMITIVES = 200;
+const MAX_PRIMITIVES = 400;
+// Responses get a higher budget: big payloads (product detail) hold the
+// interesting values deep past the prop-side cap, and a truncated index
+// makes the correlation pick a smaller, unrelated response instead.
+const MAX_RESPONSE_PRIMITIVES = 2000;
 const MAX_DEPTH = 6;
 const MAX_PATHS_PER_VALUE = 3;
 
 // Short strings/numbers ("ok", 0, 1…) match almost anything, so only
 // values with 3+ characters count as correlation signal.
-const normalize = (val: unknown): string | undefined => {
+export const normalize = (val: unknown): string | undefined => {
   if (typeof val === "string") return val.length >= 3 ? val.toLowerCase() : undefined;
   if (typeof val === "number") {
     const s = String(val);
@@ -113,10 +117,16 @@ const normalize = (val: unknown): string | undefined => {
   return undefined;
 };
 
-type Leaf = { path: string; norm: string; preview: string };
+export type Leaf = { path: string; norm: string; preview: string };
 
-const collectLeaves = (val: unknown, path: string, out: Leaf[], depth: number): void => {
-  if (out.length >= MAX_PRIMITIVES || depth > MAX_DEPTH || val === null || val === undefined) return;
+export const collectLeaves = (
+  val: unknown,
+  path: string,
+  out: Leaf[],
+  depth: number,
+  max: number = MAX_PRIMITIVES,
+): void => {
+  if (out.length >= max || depth > MAX_DEPTH || val === null || val === undefined) return;
   const norm = normalize(val);
   if (norm !== undefined) {
     out.push({ path, norm, preview: getPreview(val) });
@@ -124,18 +134,18 @@ const collectLeaves = (val: unknown, path: string, out: Leaf[], depth: number): 
   }
   if (typeof val !== "object") return;
   if (Array.isArray(val)) {
-    val.forEach((item, i) => collectLeaves(item, `${path}[${i}]`, out, depth + 1));
+    val.forEach((item, i) => collectLeaves(item, `${path}[${i}]`, out, depth + 1, max));
     return;
   }
   for (const [key, v] of Object.entries(val as Record<string, unknown>)) {
-    collectLeaves(v, path ? `${path}.${key}` : key, out, depth + 1);
+    collectLeaves(v, path ? `${path}.${key}` : key, out, depth + 1, max);
   }
 };
 
 // value → response paths holding that value (a value may occur at several paths)
-const valuePathIndex = (data: unknown): Map<string, string[]> => {
+export const valuePathIndex = (data: unknown): Map<string, string[]> => {
   const leaves: Leaf[] = [];
-  collectLeaves(data, "", leaves, 0);
+  collectLeaves(data, "", leaves, 0, MAX_RESPONSE_PRIMITIVES);
   const index = new Map<string, string[]>();
   for (const leaf of leaves) {
     const paths = index.get(leaf.norm);

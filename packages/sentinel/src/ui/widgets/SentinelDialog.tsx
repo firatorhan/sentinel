@@ -17,6 +17,7 @@ import { useSentinelDialog } from "../../react";
 import { MarkdownViewer } from "./MarkdownViewer";
 import { PropsViewer } from "./PropsViewer";
 import { ApiLayerViewer } from "./ApiLayerViewer";
+import { LineageViewer } from "./LineageViewer";
 import React from "react";
 
 const getDisplayPath = (sourceFile: string) => {
@@ -78,10 +79,11 @@ export const SentinelDialog = () => {
               )}
             </DialogTitle>
             <DialogDescription>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="md">.md</TabsTrigger>
                 <TabsTrigger value="props-tracker">Props Tracker</TabsTrigger>
                 <TabsTrigger value="api-layer">API Layer</TabsTrigger>
+                <TabsTrigger value="lineage">Lineage</TabsTrigger>
               </TabsList>
             </DialogDescription>
           </DialogHeader>
@@ -104,6 +106,18 @@ export const SentinelDialog = () => {
               effects={dialogMeta.sagaEffects}
               serverEffects={dialogMeta.serverSagaEffects}
               componentProps={dialogMeta.componentProps}
+            />
+          </TabsContent>
+
+          <TabsContent value="lineage">
+            <LineageViewer
+              componentProps={dialogMeta.componentProps}
+              state={dialogMeta.stateSnapshot}
+              serverState={dialogMeta.serverState}
+              clientActions={dialogMeta.actionLog}
+              serverActions={dialogMeta.serverActionLog}
+              clientEffects={dialogMeta.sagaEffects}
+              serverEffects={dialogMeta.serverSagaEffects}
             />
           </TabsContent>
           <DialogFooter />
