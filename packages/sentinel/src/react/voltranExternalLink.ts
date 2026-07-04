@@ -22,9 +22,12 @@ const findVoltranUrl = (fragmentId: unknown, sagaEffects: EffectRecord[], baseUr
     const idx = (effect.args[0] as any[]).findIndex((c) => c.id === fragmentId);
     if (idx === -1) continue;
 
-    // client-side: Axios result has config.url + config.params
+    // client-side: Axios result has config.url + config.params. Prefer the
+    // entry echoing the fragment id in its data — result indexes can shift
+    // against args when the server skips onlyClientSide fragments.
     if (Array.isArray(effect.result)) {
-      const config = (effect.result as any[])[idx]?.result?.config;
+      const byId = (effect.result as any[]).find((e) => e?.result?.data?.id === fragmentId);
+      const config = (byId ?? (effect.result as any[])[idx])?.result?.config;
       if (config?.url) {
         const params =
           config.params && Object.keys(config.params).length

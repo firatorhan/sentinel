@@ -33,33 +33,64 @@ export type SentinelSagaMonitor = {
   _clear(): void;
 };
 
-const safeResult = (result: unknown): unknown => {
-  if (result === undefined || result === null) return result;
-  if (
-    typeof result === "object" &&
-    "data" in (result as Record<string, unknown>) &&
-    "status" in (result as Record<string, unknown>)
-  ) {
+const trimConfig = (cfg: Record<string, unknown> | undefined) =>
+  cfg
+    ? {
+        url: cfg.url,
+        method: cfg.method,
+        baseURL: cfg.baseURL,
+        headers: cfg.headers,
+        data: cfg.data,
+        timeout: cfg.timeout,
+      }
+    : undefined;
+
+// Axios responses and errors both drag a circular `request` object along, so
+// they must be trimmed before the JSON round-trip — otherwise safeClone drops
+// the whole value.
+const trimAxiosValue = (val: unknown): unknown => {
+  if (val === null || typeof val !== "object") return val;
+  const r = val as Record<string, unknown>;
+  if ("data" in r && "status" in r) {
     // Axios-like response — keep data + safe config fields (skip functions)
-    const r = result as Record<string, unknown>;
-    const cfg = r.config as Record<string, unknown> | undefined;
-    return safeClone({
+    return {
       status: r.status,
       statusText: r.statusText,
       data: r.data,
-      config: cfg
-        ? {
-            url: cfg.url,
-            method: cfg.method,
-            baseURL: cfg.baseURL,
-            headers: cfg.headers,
-            data: cfg.data,
-            timeout: cfg.timeout,
-          }
-        : undefined,
+      config: trimConfig(r.config as Record<string, unknown> | undefined),
+    };
+  }
+  if ("config" in r && ("message" in r || "response" in r)) {
+    // Axios-like error — keep the message, config and trimmed response
+    const response = r.response as Record<string, unknown> | undefined;
+    return {
+      message: r.message,
+      config: trimConfig(r.config as Record<string, unknown> | undefined),
+      response:
+        response && typeof response === "object"
+          ? { status: response.status, statusText: response.statusText, data: response.data }
+          : undefined,
+    };
+  }
+  return val;
+};
+
+const safeResult = (result: unknown): unknown => {
+  if (result === undefined || result === null) return result;
+  if (Array.isArray(result)) {
+    // Batched result (e.g. Voltran getFragments): entries are either bare
+    // axios values or settle contexts holding one under `result`. Clone per
+    // entry so one unserializable item can't wipe out the batch, and keep
+    // indexes aligned with the effect args.
+    return result.map((entry) => {
+      if (entry !== null && typeof entry === "object" && "result" in (entry as Record<string, unknown>)) {
+        const e = entry as Record<string, unknown>;
+        return safeClone({ ...e, result: trimAxiosValue(e.result) });
+      }
+      return safeClone(trimAxiosValue(entry));
     });
   }
-  return safeClone(result);
+  return safeClone(trimAxiosValue(result));
 };
 
 export const createSentinelSagaMonitor = (

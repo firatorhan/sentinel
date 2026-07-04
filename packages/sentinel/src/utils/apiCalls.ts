@@ -6,10 +6,19 @@ export type PropMatch = {
   propPath: string;
   preview: string;
   responsePaths: string[];
+  // IDF weight: how distinctive this value is across all captured responses.
+  // 0 means the value occurs in every response and carries no signal.
+  weight: number;
 };
 
 export type ApiCall = {
   effectId: number;
+  // Position within a batched effect result (e.g. one getFragments call
+  // fanning out to N fragment requests); keeps React keys unique.
+  subIndex?: number;
+  // True when the component's fragment id points at this call directly,
+  // independent of fuzzy value matching.
+  directMatch?: boolean;
   fnName: string;
   method: string;
   url: string;
@@ -44,6 +53,20 @@ const getAxiosConfig = (val: unknown): AxiosLikeConfig | undefined => {
   if (!cfg || typeof cfg !== "object" || typeof cfg.url !== "string") return undefined;
   return cfg;
 };
+
+// Batched effects (Voltran getFragments) resolve to an array of settle
+// contexts: {result: axiosResponse | axiosError, ...}. Bare axios values
+// inside plain arrays are supported too.
+const unwrapSettled = (entry: unknown): unknown => {
+  if (entry !== null && typeof entry === "object" && "result" in (entry as Record<string, unknown>)) {
+    return (entry as Record<string, unknown>).result;
+  }
+  return entry;
+};
+
+// An axios response has a top-level status; an axios error carries the
+// config plus message/response instead.
+const isResponseLike = (val: Record<string, unknown>): boolean => "status" in val;
 
 const joinUrl = (baseURL?: string, url?: string): string => {
   if (!url) return baseURL ?? "";
@@ -122,22 +145,107 @@ const valuePathIndex = (data: unknown): Map<string, string[]> => {
   return index;
 };
 
-const matchProps = (
-  propLeaves: Leaf[],
-  responseData: unknown,
-): { matches: PropMatch[]; unmatched: string[] } => {
-  if (propLeaves.length === 0 || responseData === null || responseData === undefined) {
-    return { matches: [], unmatched: propLeaves.map((l) => l.path) };
-  }
-  const index = valuePathIndex(responseData);
-  const matches: PropMatch[] = [];
-  const unmatched: string[] = [];
+// Correlates component props with the responses of the given calls (client
+// and server merged — IDF frequencies are only meaningful over the full set).
+// A prop value scores by how distinctive it is: values occurring in every
+// response (culture, store ids…) weigh 0 and can't flag a call as matched.
+export const correlateProps = (
+  calls: ApiCall[],
+  componentProps?: Record<string, unknown>,
+): ApiCall[] => {
+  if (!componentProps) return calls;
+  const propLeaves: Leaf[] = [];
+  collectLeaves(componentProps, "", propLeaves, 0);
+
+  const indexes = calls.map((call) => valuePathIndex(call.responseData));
+
+  const totalCalls = calls.length;
+  const docFrequency = new Map<string, number>();
   for (const leaf of propLeaves) {
-    const paths = index.get(leaf.norm);
-    if (paths) matches.push({ propPath: leaf.path, preview: leaf.preview, responsePaths: paths });
-    else unmatched.push(leaf.path);
+    if (docFrequency.has(leaf.norm)) continue;
+    docFrequency.set(leaf.norm, indexes.filter((index) => index.has(leaf.norm)).length);
   }
-  return { matches, unmatched };
+  // With a single call there is no cross-call signal; every match counts as 1.
+  // Values occurring in more than half the responses (boilerplate like
+  // "stylesheet", shared config values…) carry no correlation signal at all —
+  // a soft IDF weight alone still lets them flag a call as matched.
+  const idf = (norm: string): number => {
+    const df = docFrequency.get(norm) ?? 0;
+    if (df === 0) return 0;
+    if (totalCalls <= 1) return 1;
+    if (df > totalCalls / 2) return 0;
+    return Math.log(totalCalls / df);
+  };
+
+  calls.forEach((call, i) => {
+    const index = indexes[i];
+    const matches: PropMatch[] = [];
+    const unmatched: string[] = [];
+    let score = 0;
+    for (const leaf of propLeaves) {
+      const paths = index.get(leaf.norm);
+      if (paths) {
+        const weight = idf(leaf.norm);
+        matches.push({ propPath: leaf.path, preview: leaf.preview, responsePaths: paths, weight });
+        score += weight;
+      } else {
+        unmatched.push(leaf.path);
+      }
+    }
+    call.propMatches = matches.sort((a, b) => b.weight - a.weight);
+    call.unmatchedPropPaths = unmatched;
+    call.matchScore = score;
+  });
+
+  return calls;
+};
+
+// Fallback when the response body doesn't echo the fragment id: resolve the
+// fragment config for that id from the effect args and compare its URL path
+// against the call URL. Id-based lookup sidesteps index misalignment between
+// args and results (server skips onlyClientSide fragments).
+const urlMatchesFragmentArg = (
+  effect: EffectRecord | undefined,
+  fragmentId: string,
+  callUrl: string,
+): boolean => {
+  if (!effect || !Array.isArray(effect.args?.[0])) return false;
+  const config = (effect.args[0] as Record<string, unknown>[]).find((c) => c?.id === fragmentId);
+  if (!config) return false;
+  const customApiUrl = config.customApiUrl as Record<string, unknown> | undefined;
+  const path =
+    config.clientUrl ?? config.url ?? customApiUrl?.clientUrl ?? customApiUrl?.serverUrl;
+  if (typeof path !== "string" || path.length === 0) return false;
+  return callUrl.includes(path.replace(/^\//, ""));
+};
+
+// Fragment ids requested by these effects that also occur anywhere in the
+// component's props — direct evidence the request produced the selected
+// component, regardless of which prop holds the id (works for
+// fragmentInfo.id, a bare id, or a layout's fragments map alike).
+export const detectFragmentIds = (
+  effects: EffectRecord[],
+  componentProps?: Record<string, unknown>,
+): string[] => {
+  if (!componentProps) return [];
+  const knownIds = new Map<string, string>(); // lowercased → original
+  for (const effect of effects) {
+    if (!Array.isArray(effect.args?.[0])) continue;
+    for (const config of effect.args[0] as Record<string, unknown>[]) {
+      if (typeof config?.id === "string" && config.id.length >= 3) {
+        knownIds.set(config.id.toLowerCase(), config.id);
+      }
+    }
+  }
+  if (knownIds.size === 0) return [];
+  const propLeaves: Leaf[] = [];
+  collectLeaves(componentProps, "", propLeaves, 0);
+  const referenced = new Set<string>();
+  for (const leaf of propLeaves) {
+    const id = knownIds.get(leaf.norm);
+    if (id) referenced.add(id);
+  }
+  return [...referenced];
 };
 
 export const extractApiCalls = (
@@ -153,6 +261,27 @@ export const extractApiCalls = (
       calls.push(toApiCall(effect, origin, resultConfig, effect.result as Record<string, unknown>));
       continue;
     }
+    // Batched result: fan the array out into one ApiCall per entry
+    if (Array.isArray(effect.result)) {
+      effect.result.forEach((entry, subIndex) => {
+        const settled = unwrapSettled(entry);
+        const cfg = getAxiosConfig(settled);
+        if (!cfg) return;
+        const val = settled as Record<string, unknown>;
+        if (isResponseLike(val)) {
+          calls.push({ ...toApiCall(effect, origin, cfg, val), subIndex });
+          return;
+        }
+        // Axios error settled as a value: response lives under .response
+        const response =
+          val.response !== null && typeof val.response === "object"
+            ? (val.response as Record<string, unknown>)
+            : undefined;
+        const message = typeof val.message === "string" ? val.message : undefined;
+        calls.push({ ...toApiCall(effect, origin, cfg, response, message), subIndex });
+      });
+      continue;
+    }
     // Axios rejections carry the request config (and the response for HTTP errors)
     const errorConfig = getAxiosConfig(effect.error);
     if (errorConfig) {
@@ -166,19 +295,30 @@ export const extractApiCalls = (
     }
   }
 
-  if (componentProps) {
-    const propLeaves: Leaf[] = [];
-    collectLeaves(componentProps, "", propLeaves, 0);
+  // Fuzzy prop correlation lives in correlateProps, which must run over the
+  // merged client+server call list; only id-based direct matching happens
+  // here because it needs this origin's effect args.
+  const referencedIds = detectFragmentIds(effects, componentProps);
+  if (referencedIds.length > 0) {
+    const effectById = new Map(effects.map((e) => [e.id, e]));
     for (const call of calls) {
-      const { matches, unmatched } = matchProps(propLeaves, call.responseData);
-      call.propMatches = matches;
-      call.unmatchedPropPaths = unmatched;
-      call.matchScore = matches.length;
+      const responseId = (call.responseData as Record<string, unknown> | undefined)?.id;
+      const matches =
+        (typeof responseId === "string" && referencedIds.includes(responseId)) ||
+        referencedIds.some((id) =>
+          urlMatchesFragmentArg(effectById.get(call.effectId), id, call.url),
+        );
+      if (matches) call.directMatch = true;
     }
   }
 
-  return calls.sort((a, b) => b.matchScore - a.matchScore || b.startedAt - a.startedAt);
+  return calls.sort(sortApiCalls);
 };
+
+export const sortApiCalls = (a: ApiCall, b: ApiCall): number =>
+  Number(b.directMatch ?? false) - Number(a.directMatch ?? false) ||
+  b.matchScore - a.matchScore ||
+  b.startedAt - a.startedAt;
 
 const shellQuote = (val: string): string => `'${val.replace(/'/g, `'\\''`)}'`;
 
