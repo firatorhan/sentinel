@@ -13,7 +13,14 @@ import { JsonNode } from "./JsonNode";
 import { CopyButton } from "./CopyButton";
 import { cn } from "../../utils/cn";
 import { type EffectRecord } from "../../saga/createSentinelSagaMonitor";
-import { extractApiCalls, buildCurl, type ApiCall } from "../../utils/apiCalls";
+import {
+  extractApiCalls,
+  correlateProps,
+  detectFragmentIds,
+  sortApiCalls,
+  buildCurl,
+  type ApiCall,
+} from "../../utils/apiCalls";
 
 const METHOD_COLOR: Record<string, string> = {
   GET: "text-emerald-400 border-emerald-400/50",
@@ -50,18 +57,49 @@ export const ApiLayerViewer = ({
 }) => {
   const calls = React.useMemo(
     () =>
-      [
-        ...extractApiCalls(effects ?? [], componentProps, "client"),
-        ...extractApiCalls(serverEffects ?? [], componentProps, "server"),
-      ].sort((a, b) => b.matchScore - a.matchScore || b.startedAt - a.startedAt),
+      correlateProps(
+        [
+          ...extractApiCalls(effects ?? [], componentProps, "client"),
+          ...extractApiCalls(serverEffects ?? [], componentProps, "server"),
+        ],
+        componentProps,
+      ).sort(sortApiCalls),
     [effects, serverEffects, componentProps],
   );
   const hasServerCalls = React.useMemo(() => calls.some((c) => c.origin === "server"), [calls]);
-  const matched = React.useMemo(() => calls.filter((c) => c.matchScore > 0), [calls]);
+  // Same origin+method+URL captured more than once → likely a redundant
+  // request (identical batch entries excluded: they share one effectId).
+  const duplicateCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    const seenEffects = new Map<string, Set<number>>();
+    for (const call of calls) {
+      const key = `${call.origin} ${call.method} ${call.url}`;
+      const effectIds = seenEffects.get(key) ?? new Set<number>();
+      effectIds.add(call.effectId);
+      seenEffects.set(key, effectIds);
+      counts.set(key, effectIds.size);
+    }
+    return counts;
+  }, [calls]);
+  const matched = React.useMemo(
+    () => calls.filter((c) => c.matchScore > 0 || c.directMatch),
+    [calls],
+  );
   const [view, setView] = React.useState<"matched" | "all">("matched");
 
   const hasMatches = matched.length > 0;
   const displayed = view === "matched" && hasMatches ? matched : calls;
+
+  const fragmentIds = React.useMemo(
+    () => [
+      ...new Set([
+        ...detectFragmentIds(effects ?? [], componentProps),
+        ...detectFragmentIds(serverEffects ?? [], componentProps),
+      ]),
+    ],
+    [effects, serverEffects, componentProps],
+  );
+  const hasDirectMatch = calls.some((c) => c.directMatch);
 
   if (calls.length === 0) {
     return (
@@ -79,6 +117,19 @@ export const ApiLayerViewer = ({
 
   return (
     <div className="space-y-1">
+      {fragmentIds.length > 0 && (
+        <div className="px-1 text-[10px] text-muted-foreground font-mono">
+          fragment id{fragmentIds.length > 1 ? "s" : ""} in props:{" "}
+          <span className={hasDirectMatch ? "text-emerald-400" : "text-foreground"}>
+            {fragmentIds.join(", ")}
+          </span>
+          {!hasDirectMatch && (
+            <span className="text-amber-400">
+              {" "}— no captured request matches this id
+            </span>
+          )}
+        </div>
+      )}
       {hasMatches ? (
         matched.length < calls.length && (
           <div className="flex justify-end px-1">
@@ -104,9 +155,10 @@ export const ApiLayerViewer = ({
       <Accordion type="multiple" className="w-full font-mono text-xs">
         {displayed.map((call) => (
           <ApiCallItem
-            key={`${call.origin}-${call.effectId}`}
+            key={`${call.origin}-${call.effectId}-${call.subIndex ?? 0}`}
             call={call}
             showOrigin={hasServerCalls}
+            duplicateCount={duplicateCounts.get(`${call.origin} ${call.method} ${call.url}`) ?? 1}
           />
         ))}
       </Accordion>
@@ -132,8 +184,15 @@ const PropsMapping = ({ call }: { call: ApiCall }) => {
         <AccordionContent className="pb-2! pt-0 px-2">
           <div className="space-y-0.5 overflow-x-hidden">
             {propMatches.map((m) => (
-              <div key={m.propPath} className="flex flex-wrap items-baseline gap-x-1.5">
-                <span className="text-sky-400 break-all" title={m.preview}>
+              <div
+                key={m.propPath}
+                className={cn(
+                  "flex flex-wrap items-baseline gap-x-1.5",
+                  m.weight === 0 && "opacity-50",
+                )}
+                title={m.weight === 0 ? "Value occurs in every response — no correlation signal" : m.preview}
+              >
+                <span className="text-sky-400 break-all">
                   {m.propPath}
                 </span>
                 <span className="text-muted-foreground shrink-0">←</span>
@@ -157,14 +216,22 @@ const ORIGIN_BADGE: Record<ApiCall["origin"], string> = {
   server: "text-purple-400 border-purple-400/50",
 };
 
-const ApiCallItem = ({ call, showOrigin = false }: { call: ApiCall; showOrigin?: boolean }) => {
+const ApiCallItem = ({
+  call,
+  showOrigin = false,
+  duplicateCount = 1,
+}: {
+  call: ApiCall;
+  showOrigin?: boolean;
+  duplicateCount?: number;
+}) => {
   const highlightPaths = React.useMemo(
     () => new Set((call.propMatches ?? []).flatMap((m) => m.responsePaths)),
     [call.propMatches],
   );
 
   return (
-  <AccordionItem value={`${call.origin}-${call.effectId}`}>
+  <AccordionItem value={`${call.origin}-${call.effectId}-${call.subIndex ?? 0}`}>
     <AccordionTrigger className="py-2 px-2 hover:no-underline hover:bg-muted/50 rounded font-mono text-xs font-normal">
       <Badge
         variant="outline"
@@ -189,10 +256,22 @@ const ApiCallItem = ({ call, showOrigin = false }: { call: ApiCall; showOrigin?:
       <span className="flex-1 min-w-0 line-clamp-1 break-all text-left text-foreground mx-2">
         {displayPath(call.url)}
       </span>
-      {call.matchScore > 0 && (
+      {duplicateCount > 1 && (
         <span
-          title={`${call.matchScore} prop value${call.matchScore > 1 ? "s" : ""} traced to this response`}
-          className="shrink-0 text-sky-400 mr-1"
+          title={`This request was made ${duplicateCount} times — possibly redundant`}
+          className="shrink-0 text-amber-400 mr-1 text-[10px] font-semibold"
+        >
+          ×{duplicateCount}
+        </span>
+      )}
+      {(call.directMatch || call.matchScore > 0) && (
+        <span
+          title={
+            call.directMatch
+              ? "Fragment id match — this request produced the selected component"
+              : `${(call.propMatches ?? []).filter((m) => m.weight > 0).length} distinctive prop value(s) traced to this response`
+          }
+          className={cn("shrink-0 mr-1", call.directMatch ? "text-emerald-400" : "text-sky-400")}
         >
           <Link2 size={11} />
         </span>
