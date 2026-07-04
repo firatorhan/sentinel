@@ -30,6 +30,11 @@ type DialogMeta = {
   externalLinks?: ResolvedExternalLink[];
   sagaEffects?: EffectRecord[];
   serverSagaEffects?: EffectRecord[];
+  // Snapshots taken when the dialog opens, for lineage tracing
+  stateSnapshot?: unknown;
+  serverState?: unknown;
+  actionLog?: ActionRecord[];
+  serverActionLog?: ActionRecord[];
 };
 
 export type ReduxStore = {
@@ -161,9 +166,23 @@ export const SentinelProvider = ({
         .map((link) => ({ label: link.label, url: link.url(componentProps ?? {}, sagaEffects) }))
         .filter((link) => link.url);
       setOpenDialogId(id);
-      setDialogMeta({ componentName, sourceFile, renderCount, propHistory, md, componentProps, externalLinks: resolvedLinks, sagaEffects: clientSagaEffects, serverSagaEffects });
+      setDialogMeta({
+        componentName,
+        sourceFile,
+        renderCount,
+        propHistory,
+        md,
+        componentProps,
+        externalLinks: resolvedLinks,
+        sagaEffects: clientSagaEffects,
+        serverSagaEffects,
+        stateSnapshot: reduxStore?.getState(),
+        serverState,
+        actionLog: reduxMiddleware?._getRecords() ?? [],
+        serverActionLog,
+      });
     },
-    [externalLinks, sagaMonitor, serverSagaEffects],
+    [externalLinks, sagaMonitor, serverSagaEffects, reduxStore, reduxMiddleware, serverState, serverActionLog],
   );
 
   const closeDialog = useCallback(() => {
