@@ -98,4 +98,15 @@ describe("createSentinelBridge", () => {
     expect(ws.messages().filter((m) => m.kind === "active").length).toBeGreaterThanOrEqual(1);
     bridge.dispose();
   });
+
+  it("sends active signal when the tab becomes visible", () => {
+    const bridge = create();
+    const ws = MockWebSocket.instances[0];
+    ws.open();
+    const before = ws.messages().filter((m) => m.kind === "active").length;
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(ws.messages().filter((m) => m.kind === "active").length).toBeGreaterThan(before);
+    bridge.dispose();
+  });
 });
