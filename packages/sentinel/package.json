@@ -27,6 +27,11 @@
       "import": "./dist/sentinel.es.js",
       "require": "./dist/sentinel.cjs"
     },
+    "./core": {
+      "types": "./dist/src/core.d.ts",
+      "import": "./dist/core.es.js",
+      "require": "./dist/core.cjs"
+    },
     "./index.css": "./dist/sentinel.css"
   },
   "files": [

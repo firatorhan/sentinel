@@ -58,10 +58,16 @@ export default defineConfig({
   build: {
     target: "es2019",
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
+      entry: {
+        index: path.resolve(__dirname, "src/index.ts"),
+        core: path.resolve(__dirname, "src/core.ts"),
+      },
       name: "Sentinel",
       formats: ["es", "cjs"],
-      fileName: (format) => format === "cjs" ? "sentinel.cjs" : `sentinel.${format}.js`,
+      fileName: (format, entryName) => {
+        const base = entryName === "index" ? "sentinel" : entryName;
+        return format === "cjs" ? `${base}.cjs` : `${base}.${format}.js`;
+      },
     },
     rollupOptions: {
       external: ["react", "react-dom"],

@@ -12,7 +12,9 @@ class MockWebSocket {
   onmessage: ((e: { data: string }) => void) | null = null;
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
-  constructor(public url: string) {
+  url: string;
+  constructor(url: string) {
+    this.url = url;
     MockWebSocket.instances.push(this);
   }
   send(data: string) { this.sent.push(data); }
