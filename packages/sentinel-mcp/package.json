@@ -4,21 +4,37 @@
   "description": "MCP server exposing sentinel runtime data to coding agents",
   "author": "firatorhan",
   "private": false,
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/firatorhan/sentinel.git",
     "directory": "packages/sentinel-mcp"
   },
-  "keywords": ["sentinel", "mcp", "modelcontextprotocol", "observability"],
+  "keywords": [
+    "sentinel",
+    "mcp",
+    "modelcontextprotocol",
+    "observability"
+  ],
   "type": "module",
-  "bin": { "sentinel-mcp": "dist/cli.js" },
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  "bin": {
+    "sentinel-mcp": "dist/cli.js"
   },
-  "files": ["dist"],
-  "engines": { "node": ">=18" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsup"
   },
@@ -26,7 +42,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@sentinel-core/sentinel": "*",
     "ws": "^8.18.0",
-    "zod": "^3.25.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.12.3",
