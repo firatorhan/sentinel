@@ -206,3 +206,14 @@ mevcut entegrasyon desktop'la sınırlı, MCP de öyle kalır.
 - `packages/sentinel/src/saga/createSentinelSagaMonitor.ts` — `_getSerializableEffects`
 - `packages/sentinel/src/redux/createSentinelReduxMiddleware.ts` — `_getSerializableRecords`
 - `packages/sentinel/src/react/provider.tsx` — `mcp` prop'unun ekleneceği yer
+
+## Bilinen sınırlar (ilk uçtan uca çalıştırmadan, Temmuz 2026)
+
+- **Geniş sorgularda lineage çıktısı uzun:** `get_lineage("price")` gibi jenerik bir
+  sorgu path-match ile 20 kayda kadar dönebiliyor ve aynı action/API çifti her
+  kayıtta tekrarlanıyor. Değer sorguları ("1299") çok daha isabetli. İyileştirme
+  adayı: aynı action+API zincirini paylaşan kayıtları grupla.
+- **`get_state` özet çıktısı reducer bazında kalıyor:** 36 top-level key döndü;
+  ikinci seviye özet (örn. en büyük 3 alt anahtar) keşfi hızlandırabilir.
+- Gerçek kazanım örneği: `get_duplicates` ilk çalıştırmada gerçek bir double-call
+  yakaladı (featuretoggle SSR'da 2x çağrılıyor).
