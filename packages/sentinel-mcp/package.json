@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@sentinel-core/sentinel": "*",
+    "@sentinel-core/sentinel": "^1.0.61",
     "ws": "^8.18.0",
     "zod": "^4.4.3"
   },
