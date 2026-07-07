@@ -6,11 +6,12 @@
   "workspaces": [
     "packages/sentinel",
     "packages/sentinel-plugin",
+    "packages/sentinel-mcp",
     "playground-webpack"
   ],
   "scripts": {
     "dev": "npm run start --workspace=playground-webpack",
-    "build": "npm run build --workspace=packages/sentinel && npm run build --workspace=packages/sentinel-plugin",
+    "build": "npm run build --workspace=packages/sentinel && npm run build --workspace=packages/sentinel-plugin && npm run build --workspace=packages/sentinel-mcp",
     "clean": "rm -rf node_modules packages/sentinel/node_modules packages/sentinel-plugin/node_modules playground-webpack/node_modules packages/sentinel/dist packages/sentinel-plugin/dist playground-webpack/dist package-lock.json"
   },
   "devDependencies": {
