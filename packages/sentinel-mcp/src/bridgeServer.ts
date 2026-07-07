@@ -23,7 +23,8 @@ export class BridgeServer {
   private nextRequestId = 0;
 
   constructor(port: number) {
-    this.wss = new WebSocketServer({ port });
+    // Sadece loopback: snapshot'lar LAN'a asla açılmaz ("her şey lokal" garantisi).
+    this.wss = new WebSocketServer({ port, host: "127.0.0.1" });
     this.wss.on("connection", (socket) => {
       let tabId: string | undefined;
       socket.on("message", (data) => {
