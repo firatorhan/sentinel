@@ -11,6 +11,7 @@ import { SentinelToolbar } from "../ui/widgets/SentinelToolbar";
 import { Spotlight } from "../ui/widgets/Spotlight";
 import { type SentinelSagaMonitor, type EffectRecord } from "../saga/createSentinelSagaMonitor";
 import { type SentinelReduxMiddleware, type ActionRecord } from "../redux/createSentinelReduxMiddleware";
+import { createSentinelBridge } from "../bridge/createSentinelBridge";
 
 export type ExternalLink = {
   match: (componentName: string, props: Record<string, any>) => boolean;
@@ -88,6 +89,7 @@ export const SentinelProvider = ({
   serverSagaEffects,
   serverActionLog,
   externalLinks,
+  mcp,
 }: {
   children: React.ReactNode;
   store?: ReduxStore;
@@ -97,6 +99,7 @@ export const SentinelProvider = ({
   serverSagaEffects?: EffectRecord[];
   serverActionLog?: ActionRecord[];
   externalLinks?: ExternalLink[];
+  mcp?: { url?: string };
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
@@ -123,6 +126,25 @@ export const SentinelProvider = ({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!mcp) return;
+    const bridge = createSentinelBridge({
+      url: mcp.url,
+      getSnapshot: () => ({
+        state: reduxStore?.getState(),
+        serverState,
+        clientEffects: sagaMonitor?._getSerializableEffects() ?? [],
+        serverEffects: serverSagaEffects,
+        clientActions: reduxMiddleware?._getSerializableRecords() ?? [],
+        serverActions: serverActionLog,
+      }),
+    });
+    return bridge.dispose;
+    // Köprü mount'ta bir kez kurulur; monitor/store referansları uygulama
+    // ömrü boyunca sabittir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const registerHover = useCallback((id: string, rect: DOMRect) => {

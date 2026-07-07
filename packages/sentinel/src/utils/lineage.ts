@@ -9,6 +9,7 @@ import {
   extractApiCalls,
   correlateProps,
 } from "./apiCalls";
+import { searchStateByQuery } from "./stateQuery";
 
 export type LineageEntry = {
   propPath: string;
@@ -281,4 +282,102 @@ export const buildLineage = (input: LineageInput): LineageEntry[] => {
       completeness(b) - completeness(a) ||
       (bestCallByProp.get(b.propPath)?.weight ?? 0) - (bestCallByProp.get(a.propPath)?.weight ?? 0),
   );
+};
+
+export type QueryLineageEntry = {
+  statePath: string;
+  preview: string;
+  matchType: "path" | "value";
+  actionType?: string;
+  actionTimestamp?: number;
+  actionOrigin?: "client" | "server";
+  api?: {
+    method: string;
+    url: string;
+    origin: ApiCall["origin"];
+    status?: number;
+    duration?: number;
+  };
+};
+
+export type QueryLineageInput = {
+  query: string;
+  state?: unknown;
+  serverState?: unknown;
+  clientActions?: ActionRecord[];
+  serverActions?: ActionRecord[];
+  clientEffects?: EffectRecord[];
+  serverEffects?: EffectRecord[];
+};
+
+// buildLineage'in ters yönlü varyantı: componentProps yerine serbest sorgudan
+// başlar (MCP senaryosu — tıklanan komponent yok). Zincir aynı yapı taşlarıyla
+// kurulur: state path (searchStateByQuery) → action (findActionForStatePath)
+// → API call (findApiCallForAction).
+export const buildLineageFromQuery = (input: QueryLineageInput): QueryLineageEntry[] => {
+  const {
+    query,
+    state,
+    serverState,
+    clientActions = [],
+    serverActions = [],
+    clientEffects = [],
+    serverEffects = [],
+  } = input;
+
+  const matches = searchStateByQuery(state ?? serverState, query);
+  if (matches.length === 0) return [];
+
+  const clientCalls = extractApiCalls(clientEffects, undefined, "client");
+  const serverCalls = extractApiCalls(serverEffects, undefined, "server");
+
+  const actions: OriginAction[] = [
+    ...clientActions.map((record) => ({ record, origin: "client" as const })),
+    ...serverActions.map((record) => ({ record, origin: "server" as const })),
+  ].sort((a, b) => b.record.timestamp - a.record.timestamp);
+
+  const payloadNormCache = new Map<ActionRecord, Set<string>>();
+  const payloadNorms = (record: ActionRecord): Set<string> => {
+    let norms = payloadNormCache.get(record);
+    if (!norms) {
+      norms = new Set(valuePathIndex(record.action).keys());
+      payloadNormCache.set(record, norms);
+    }
+    return norms;
+  };
+
+  const entries: QueryLineageEntry[] = matches.map((match) => {
+    const entry: QueryLineageEntry = {
+      statePath: match.path,
+      preview: match.preview,
+      matchType: match.matchType,
+    };
+
+    const action = findActionForStatePath(match.path, actions, match.norm ?? "", payloadNorms);
+    if (action) {
+      entry.actionType = action.record.action?.type;
+      entry.actionTimestamp = action.record.timestamp;
+      entry.actionOrigin = action.origin;
+
+      if (entry.actionType) {
+        const originEffects = action.origin === "client" ? clientEffects : serverEffects;
+        const originCalls = action.origin === "client" ? clientCalls : serverCalls;
+        const call = findApiCallForAction(entry.actionType, originEffects, originCalls);
+        if (call) {
+          entry.api = {
+            method: call.method,
+            url: call.url,
+            origin: call.origin,
+            status: call.responseStatus,
+            duration: call.duration,
+          };
+        }
+      }
+    }
+    return entry;
+  });
+
+  const completeness = (e: QueryLineageEntry): number =>
+    (e.actionType ? 1 : 0) + (e.api ? 1 : 0) + (e.matchType === "value" ? 1 : 0);
+  return entries.sort((a, b) => completeness(b) - completeness(a));
 };

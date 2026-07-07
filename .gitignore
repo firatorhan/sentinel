@@ -26,3 +26,7 @@ mockSaga.js
 *.njsproj
 *.sln
 *.sw?
+
+# superpowers scratch
+.superpowers/
+*.tsbuildinfo
