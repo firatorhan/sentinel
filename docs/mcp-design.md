@@ -141,14 +141,27 @@ işaretlenir.
 Son N action: `type, timestamp, diff özetleri (path + type)`. Diff `prev/next` değerleri
 preview olarak kısaltılır.
 
+### `get_component_props(name?, tab_id?)`
+
+Bir React component'inin runtime'da **gerçekten aldığı** proplar. `name` verilirse o
+component'in mount olmuş her instance'ı: `renderCount`, `sourceFile` ve güncel proplar;
+`name` yoksa yakalanan tüm component'lerin `isim ×adet` özeti. Redux'a hiç uğramayan
+proplar da (local/computed/context) görünür. Proplar `safeSerialize`'li; gösterimde yalnızca
+aşırı uzun **string değerler** (raw HTML/base64) önizlemeye kısaltılır, yapı ve tüm anahtarlar
+korunur.
+
+Publish tarafı: her `Sentinel` wrapper, `isActive`'ten bağımsız olarak her render'da
+provider'daki flat ambient `componentRegistry`'ye `{id, name, props, renderCount, sourceFile}`
+yazar, unmount'ta siler; `getSnapshot` bunu `components` alanı olarak gönderir.
+
 ### `list_tabs()`
 
 Bağlı sekmeler: `tab_id, url, title, aktif mi, son görülme zamanı`.
 
 ### Kapsam dışı (faz 2)
 
-- `get_component_props` / komponent registry publish (wrapper verisi şu an sadece tıklama
-  anında toplanıyor; sürekli toplama ayrı tasarım gerektirir)
+- Komponent ağacı / hiyerarşi (parentId ile subtree) — flat `get_component_props` yeterli
+  bulundu; iç içe analiz somut ihtiyaç çıkınca eklenir
 - API response body detay tool'u
 - `buildCurl` ile "curl olarak ver"
 

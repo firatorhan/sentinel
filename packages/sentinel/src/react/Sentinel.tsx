@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useSentinelInteraction } from "./provider";
 import { useId } from "@huin-core/react-id";
 import { safeSerialize } from "../utils/safeSerialize";
@@ -21,7 +21,7 @@ export const Sentinel = ({
   componentProps,
 }: SentinelProps) => {
   const id = useId();
-  const { isActive, showOutlines, highlightName, registerHover, unregisterHover, openDialog } =
+  const { isActive, showOutlines, highlightName, componentRegistry, registerHover, unregisterHover, openDialog } =
     useSentinelInteraction();
 
   const propHistoryRef = useRef<Record<string, any>[]>([]);
@@ -34,6 +34,26 @@ export const Sentinel = ({
     prevPropsRef.current = currentPropsStr;
     propHistoryRef.current = [safeProps, ...propHistoryRef.current].slice(0, 6);
   }
+
+  // Ambient registration for MCP: write to the central registry every time
+  // props change, regardless of isActive (the agent queries without toggling
+  // the UI). currentPropsStr keeps the effect from firing on unrelated renders.
+  useEffect(() => {
+    componentRegistry.upsert({
+      id,
+      name: componentName ?? "Anonymous",
+      sourceFile,
+      renderCount: renderCount ?? 0,
+      props: safeProps ?? {},
+      updatedAt: Date.now(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [componentRegistry, id, componentName, sourceFile, renderCount, currentPropsStr]);
+
+  useEffect(
+    () => () => componentRegistry.unregister(id),
+    [componentRegistry, id],
+  );
 
   if (!isActive) return <>{children}</>;
 

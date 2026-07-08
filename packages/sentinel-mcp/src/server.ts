@@ -6,6 +6,7 @@ import { formatLineage } from "./tools/lineage";
 import { listApiCalls, findDuplicates } from "./tools/apiCalls";
 import { formatState } from "./tools/state";
 import { formatActionLog } from "./tools/actionLog";
+import { formatComponents } from "./tools/components";
 import { formatTime } from "./tools/format";
 
 export type SnapshotSource = {
@@ -92,6 +93,22 @@ export const createServer = (bridge: SnapshotSource): McpServer => {
       },
     },
     ({ limit, tab_id }) => withSnapshot(tab_id, (snapshot) => formatActionLog(snapshot, limit)),
+  );
+
+  server.registerTool(
+    "get_component_props",
+    {
+      description:
+        "Inspect the props a React component actually received on the running page. Give `name` to see every mounted instance of that component with its current props and render count; omit `name` to list all captured components. Call this when redux state looks correct but a component renders wrong, or to see props that never touch redux (local/computed/context props).",
+      inputSchema: {
+        name: z
+          .string()
+          .optional()
+          .describe("Component name, substring match (e.g. ProductCard)"),
+        tab_id: tabIdSchema,
+      },
+    },
+    ({ name, tab_id }) => withSnapshot(tab_id, (snapshot) => formatComponents(snapshot, { name })),
   );
 
   server.registerTool(

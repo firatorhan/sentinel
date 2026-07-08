@@ -11,6 +11,11 @@ import { SentinelToolbar } from "../ui/widgets/SentinelToolbar";
 import { Spotlight } from "../ui/widgets/Spotlight";
 import { type SentinelSagaMonitor, type EffectRecord } from "../saga/createSentinelSagaMonitor";
 import { type SentinelReduxMiddleware, type ActionRecord } from "../redux/createSentinelReduxMiddleware";
+import {
+  createSentinelComponentRegistry,
+  noopComponentRegistry,
+  type SentinelComponentRegistry,
+} from "./componentRegistry";
 import { createSentinelBridge } from "../bridge/createSentinelBridge";
 
 export type ExternalLink = {
@@ -53,6 +58,7 @@ type SentinelInteractionContextType = {
   highlightName: string;
   setHighlightName: (value: string) => void;
   reduxStore: ReduxStore | undefined;
+  componentRegistry: SentinelComponentRegistry;
   registerHover: (id: string, rect: DOMRect) => void;
   unregisterHover: (id: string) => void;
   openDialog: (
@@ -108,6 +114,7 @@ export const SentinelProvider = ({
   const [isActive, setIsActive] = useState(false);
   const [showOutlines, setShowOutlines] = useState(false);
   const [highlightName, setHighlightName] = useState("");
+  const componentRegistry = useMemo(() => createSentinelComponentRegistry(), []);
 
   useEffect(() => {
     if (!isActive) {
@@ -139,6 +146,7 @@ export const SentinelProvider = ({
         serverEffects: serverSagaEffects,
         clientActions: reduxMiddleware?._getSerializableRecords() ?? [],
         serverActions: serverActionLog,
+        components: componentRegistry._getSerializableRecords(),
       }),
     });
     return bridge.dispose;
@@ -213,8 +221,8 @@ export const SentinelProvider = ({
   }, []);
 
   const interactionValue = useMemo(
-    () => ({ activeId, activeRect, isActive, setIsActive, showOutlines, setShowOutlines, highlightName, setHighlightName, reduxStore, registerHover, unregisterHover, openDialog }),
-    [activeId, activeRect, isActive, showOutlines, highlightName, reduxStore, registerHover, unregisterHover, openDialog],
+    () => ({ activeId, activeRect, isActive, setIsActive, showOutlines, setShowOutlines, highlightName, setHighlightName, reduxStore, componentRegistry, registerHover, unregisterHover, openDialog }),
+    [activeId, activeRect, isActive, showOutlines, highlightName, reduxStore, componentRegistry, registerHover, unregisterHover, openDialog],
   );
 
   const dialogValue = useMemo(
@@ -245,6 +253,7 @@ const noopInteraction: SentinelInteractionContextType = {
   highlightName: "",
   setHighlightName: () => {},
   reduxStore: undefined,
+  componentRegistry: noopComponentRegistry,
   registerHover: () => {},
   unregisterHover: () => {},
   openDialog: () => {},

@@ -12,6 +12,8 @@ export type {
 } from "./utils/lineage";
 export { searchStateByQuery } from "./utils/stateQuery";
 export type { StateQueryMatch } from "./utils/stateQuery";
+export { findComponentsByName, summarizeComponents } from "./utils/componentQuery";
+export type { ComponentSummary } from "./utils/componentQuery";
 export { extractApiCalls, correlateProps, sortApiCalls, buildCurl } from "./utils/apiCalls";
 export type { ApiCall, PropMatch } from "./utils/apiCalls";
 export type {
@@ -27,4 +29,4 @@ export type {
   SentinelReduxMiddleware,
 } from "./redux/createSentinelReduxMiddleware";
 export { DEFAULT_MCP_URL } from "./bridge/protocol";
-export type { Snapshot, SnapshotData, BrowserMessage, ServerMessage } from "./bridge/protocol";
+export type { Snapshot, SnapshotData, BrowserMessage, ServerMessage, ComponentRecord } from "./bridge/protocol";
