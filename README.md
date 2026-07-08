@@ -92,6 +92,7 @@ claude mcp add sentinel -- npx @sentinel-core/mcp
 | `get_duplicates()` | Which requests are redundant / double-fetched? |
 | `get_state(path?, query?)` | What does the Redux state hold right now? |
 | `get_action_log(limit?)` | Which action changed what in state? |
+| `get_component_props(name?)` | What props did a component actually receive? (incl. non-redux props) |
 | `list_tabs()` | Which browser tabs are connected? |
 
 Everything runs locally: the bridge server binds to `127.0.0.1` only, no data leaves your

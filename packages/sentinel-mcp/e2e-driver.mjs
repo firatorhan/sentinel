@@ -36,6 +36,19 @@ console.log("\n=== get_state (özet) ===\n" + (await call("get_state")));
 console.log("\n=== get_state (query: price) ===\n" + (await call("get_state", { query: "price" })));
 console.log("\n=== get_action_log ===\n" + (await call("get_action_log", { limit: 10 })));
 console.log("\n=== get_lineage (query: price) ===\n" + (await call("get_lineage", { query: "price" })));
+
+const componentsSummary = await call("get_component_props");
+console.log("\n=== get_component_props (özet) ===\n" + componentsSummary);
+// Özetten ilk component adını çek ("Name  ×N" satırı) ve onunla sorgula.
+const firstName = componentsSummary
+  .split("\n")
+  .map((l) => l.trim())
+  .find((l) => /\s×\d+$/.test(l))
+  ?.replace(/\s+×\d+$/, "");
+if (firstName) {
+  console.log(`\n=== get_component_props (name: ${firstName}) ===\n` + (await call("get_component_props", { name: firstName })));
+}
+
 console.log("\n[e2e] TAMAM — process kapatılıyor.");
 await client.close();
 process.exit(0);

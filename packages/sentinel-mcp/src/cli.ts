@@ -21,3 +21,19 @@ try {
 const server = createServer(bridge);
 await server.connect(new StdioServerTransport());
 console.error(`[sentinel-mcp] ready — MCP on stdio, browser bridge on ws://localhost:${port}`);
+
+// Bridge'in WebSocket server'ı event loop'u canlı tutar; parent (MCP client)
+// ölüp stdin kapandığında süreç kendiliğinden bitmez ve öksüz kalıp portu
+// işgal eder. Her kapanma sinyalinde bridge'i kapatıp çıkmak zorundayız.
+let shuttingDown = false;
+const shutdown = () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  void bridge.close().finally(() => process.exit(0));
+};
+
+process.stdin.on("end", shutdown);
+process.stdin.on("close", shutdown);
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+server.server.onclose = shutdown;

@@ -100,7 +100,7 @@ agent'ın tek başına yapamadığı şey.
 - Snapshot ne zaman gönderilir? (interval / her effect'te / talep üzerine "pull" — pull daha temiz olabilir: MCP process tarayıcıya WebSocket üzerinden "şimdiki durumu ver" der)
 - Birden çok sekme/sayfa açıkken hangi snapshot geçerli? (son aktif sekme? sekme seçimi tool parametresi?)
 - Paket yapısı: `@sentinel-core/mcp` ayrı paket mi, sentinel monorepo'sunda üçüncü workspace mi? (monorepo önerilir — `packages/sentinel-mcp`)
-- Komponent bazlı tool gerekir mi? (`get_component_props(name)` — Sentinel wrapper verisi şu an sadece tıklama anında toplanıyor; publish edilecek veri setine komponent kayıtları da eklenmeli mi?)
+- ~~Komponent bazlı tool gerekir mi?~~ **Karara bağlandı (v1.0.0): evet.** `get_component_props(name?)` eklendi. Wrapper verisi artık sadece tıklamada değil, her render'da (tıklamadan bağımsız) provider'daki flat ambient `componentRegistry`'ye publish ediliyor; snapshot'a `components` alanı olarak giriyor. Hiyerarşi/ağaç yerine flat yaklaşım seçildi (Redux-ağırlıklı uygulamada prop-drilling nadir); aynı isimden birden çok instance proplarıyla ayrışıyor.
 
 ## İlgili mevcut altyapı
 

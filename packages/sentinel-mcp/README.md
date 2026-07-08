@@ -49,6 +49,7 @@ productState.product.prices[0].value = 1299
 | `get_duplicates(tab_id?)` | Requests issued more than once, incl. server+client double-fetches |
 | `get_state(path?, query?, tab_id?)` | Exact value at a path, free-text search, or top-level summary |
 | `get_action_log(limit?, tab_id?)` | Recent redux actions with deep-diff paths of what they changed |
+| `get_component_props(name?, tab_id?)` | Props a React component actually received. `name` lists every instance of that component with its current props + render count; omit `name` to list all captured components. Sees props that never touch redux (local/computed/context) |
 | `list_tabs()` | Connected browser tabs; the last active tab is the default target |
 
 All tools accept an optional `tab_id` (from `list_tabs`); without it the last active tab is used.
