@@ -2,10 +2,13 @@ import React, { useState } from "react";
 import { SentinelProvider, voltranExternalLink } from "@sentinel-core/sentinel";
 import { ProductCard } from "./components/ProductCard.jsx";
 import { VoltranFragment } from "./components/VoltranFragment.jsx";
-import { mockStore } from "./mockStore.js";
-import { mockSagaMonitor } from "./mockSagaMonitor.js";
-import { mockReduxMiddleware } from "./mockReduxMiddleware.js";
-import { serverState, serverSagaEffects, serverActionLog } from "./mockServerData.js";
+import { mockStore } from "./mocks/mockStore.js";
+import { mockSagaMonitor } from "./mocks/mockSagaMonitor.js";
+import { mockReduxMiddleware } from "./mocks/mockReduxMiddleware.js";
+import { serverState, serverSagaEffects, serverActionLog } from "./mocks/mockServerData.js";
+import { buildRealProduct } from "./mocks/storefront/realProduct.js";
+
+const realProduct = buildRealProduct();
 
 const fragments = [
   {
@@ -68,11 +71,13 @@ function App() {
           serverSagaEffects={serverSagaEffects}
           serverActionLog={serverActionLog}
           externalLinks={[voltranExternalLink({ label: "Open in Voltran" })]}
+          mcp={{ url: "ws://localhost:8790" }}
         >
           <div className="flex gap-4 flex-nowrap justify-start">
             {products.map((product) => (
               <ProductCard key={product.id} p={product} tick={tick} />
             ))}
+            <ProductCard p={realProduct} tick={tick} />
           </div>
           <div style={{ marginTop: 24 }}>
             <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 8, textAlign: "center" }}>
