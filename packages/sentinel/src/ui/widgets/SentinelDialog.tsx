@@ -28,13 +28,18 @@ const getDisplayPath = (sourceFile: string) => {
 
 export const SentinelDialog = () => {
   const { openDialogId, closeDialog, dialogMeta } = useSentinelDialog();
+  const hasMd = Boolean(dialogMeta?.md);
 
   return (
     <Dialog
       open={openDialogId !== null}
       onOpenChange={(open) => !open && closeDialog()}
     >
-      <Tabs className="mt-1" defaultValue="md">
+      <Tabs
+        className="mt-1"
+        key={dialogMeta?.sourceFile ?? openDialogId ?? undefined}
+        defaultValue={hasMd ? "md" : "props-tracker"}
+      >
         <DialogContent className="h-fit overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center">
@@ -79,8 +84,8 @@ export const SentinelDialog = () => {
               )}
             </DialogTitle>
             <DialogDescription>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="md">.md</TabsTrigger>
+              <TabsList className={`grid w-full ${hasMd ? "grid-cols-4" : "grid-cols-3"}`}>
+                {hasMd && <TabsTrigger value="md">.md</TabsTrigger>}
                 <TabsTrigger value="props-tracker">Props Tracker</TabsTrigger>
                 <TabsTrigger value="api-layer">API Layer</TabsTrigger>
                 <TabsTrigger value="lineage">Lineage</TabsTrigger>
@@ -88,9 +93,11 @@ export const SentinelDialog = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <TabsContent value="md">
-            <MarkdownViewer content={dialogMeta?.md || ""} />
-          </TabsContent>
+          {hasMd && (
+            <TabsContent value="md">
+              <MarkdownViewer content={dialogMeta.md || ""} />
+            </TabsContent>
+          )}
 
           <TabsContent value="props-tracker">
             {dialogMeta.componentProps && (

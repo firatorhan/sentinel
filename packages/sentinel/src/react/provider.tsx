@@ -111,7 +111,10 @@ export const SentinelProvider = ({
   const [activeRect, setActiveRect] = useState<DOMRect | null>(null);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const [dialogMeta, setDialogMeta] = useState<DialogMeta>({});
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("sentinel_active") === "true";
+  });
   const [showOutlines, setShowOutlines] = useState(false);
   const [highlightName, setHighlightName] = useState("");
   const componentRegistry = useMemo(() => createSentinelComponentRegistry(), []);
@@ -134,6 +137,17 @@ export const SentinelProvider = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (isActive) {
+      url.searchParams.set("sentinel_active", "true");
+    } else {
+      url.searchParams.delete("sentinel_active");
+    }
+    window.history.replaceState(window.history.state, "", url);
+  }, [isActive]);
 
   useEffect(() => {
     if (!mcp) return;
